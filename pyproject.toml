@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling>=1.29"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nexis"
+version = "0.1.0"
+description = "Autonomous multi-agent business idea pipeline built on LangGraph"
+requires-python = ">=3.11"
+dependencies = [
+    "langgraph>=1.1",
+    "langchain>=1.2",
+    "langchain-anthropic>=1.4",
+    "langchain-openai>=1.1",
+    "langgraph-checkpoint-sqlite>=3.0",
+    "pydantic>=2.7.4",
+    "pydantic-settings>=2.13",
+    "tavily-python>=0.7",
+    "langsmith>=0.7",
+    "jinja2>=3.1",
+]
+
+[project.optional-dependencies]
+postgres = ["langgraph-checkpoint-postgres>=3.0"]
+
+[project.scripts]
+nexis = "nexis.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nexis"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-mock>=3.14",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+    "live: marks tests that require real API keys (deselect with '-k not live')",
+]
