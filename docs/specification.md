@@ -344,11 +344,11 @@ Approximate per-run cost assuming 8 candidate ideas with 3 surviving to Layer 3 
 
 | Component | Technology |
 |---|---|
-| Orchestration | LangGraph 0.3+ (StateGraph, Send, subgraphs, checkpointing) |
+| Orchestration | LangGraph 1.1+ (StateGraph, Send, subgraphs, checkpointing) |
 | LLM Provider | Configurable via `model_name` |
 | Structured Output | LangChain `with_structured_output()` + Pydantic v2 models |
 | Web Search | Tavily Search API (primary), Serper API (fallback) |
-| Checkpointing | PostgresSaver (production), SqliteSaver (development) |
+| Checkpointing | PostgresSaver via `langgraph-checkpoint-postgres` (production), SqliteSaver via `langgraph-checkpoint-sqlite` (development) |
 | Tracing | LangSmith (integrated via LangChain callbacks) |
 | Runtime | Python 3.11+, asyncio for parallel execution |
 | Package Management | uv |

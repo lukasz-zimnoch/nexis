@@ -23,7 +23,7 @@ If all ideas in Layer 2 score below the threshold, the graph routes back to Laye
 ```bash
 uv sync
 cp .env.example .env
-# Fill in ANTHROPIC_API_KEY, TAVILY_API_KEY, and DATABASE_URL
+# Fill in ANTHROPIC_API_KEY and TAVILY_API_KEY
 ```
 
 ## Usage
@@ -81,11 +81,11 @@ nexis/
 
 ## Tech stack
 
-- **Orchestration:** LangGraph 0.3+ (StateGraph, Send, subgraphs, checkpointing)
+- **Orchestration:** LangGraph 1.1+ (StateGraph, Send, subgraphs, checkpointing)
 - **LLM:** configurable via `model_name`
 - **Structured output:** LangChain `with_structured_output()` + Pydantic v2
 - **Web search:** Tavily (primary), Serper (fallback)
-- **Checkpointing:** PostgresSaver (production), SqliteSaver (development)
+- **Checkpointing:** PostgresSaver via `langgraph-checkpoint-postgres` (production), SqliteSaver via `langgraph-checkpoint-sqlite` (development)
 - **Tracing:** LangSmith
 - **Reports:** Jinja2 + WeasyPrint (PDF)
 
