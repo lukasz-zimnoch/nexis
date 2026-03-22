@@ -56,7 +56,7 @@ python -m nexis --prompt "B2B SaaS tools for small construction companies"
 | `top_k` | `3` | Max ideas passed from Layer 2 to Layer 3 |
 | `score_threshold` | `0.55` | Minimum aggregate score to pass Layer 2 filter |
 | `max_retries` | `2` | Max retry loops if no ideas pass the threshold |
-| `model_name` | `claude-sonnet-4-20250514` | LLM model for all agents |
+| `model_name` | *(required)* | LLM model for all agents |
 | `output_format` | `markdown` | Final report format: `markdown` \| `pdf` \| `json` |
 | `enable_trend_scanner` | `true` | Run the Trend Scanner sub-agent |
 | `enable_devils_advocate` | `true` | Run adversarial validation in Layer 4 |
@@ -84,7 +84,7 @@ nexis/
 ## Tech stack
 
 - **Orchestration:** LangGraph 0.3+ (StateGraph, Send, subgraphs, checkpointing)
-- **LLM:** Anthropic Claude Sonnet
+- **LLM:** configurable via `model_name`
 - **Structured output:** LangChain `with_structured_output()` + Pydantic v2
 - **Web search:** Tavily (primary), Serper (fallback)
 - **Checkpointing:** PostgresSaver (production), SqliteSaver (development)
