@@ -1,0 +1,16 @@
+## {{ idea.title }}
+
+| Field | Value |
+|---|---|
+| Problem | {{ idea.problem_statement }} |
+| Target Market | {{ idea.target_market }} |
+| Revenue Model | {{ idea.revenue_model }} |
+| TAM | {{ idea.estimated_tam or "Unknown" }} |
+| Confidence | {{ "%.0f"|format(idea.confidence * 100) }}% |
+| Score | {{ "%.2f"|format(score) }} |
+
+### Trend Signals
+
+{% for signal in idea.trend_signals %}
+- [{{ signal.source }}] {{ signal.signal }} ({{ signal.url }})
+{% endfor %}

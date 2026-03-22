@@ -1,0 +1,67 @@
+# Nexis Business Idea Report
+
+Generated: {{ now }}
+
+## Executive Summary
+
+{{ top_ideas | length }} idea(s) selected from {{ ideas_evaluated }} evaluated.
+
+{% if not top_ideas %}
+No viable business ideas were found that met the scoring threshold.
+{% endif %}
+{% for idea in top_ideas %}
+## {{ idea.title }}
+
+**Score:** {{ "%.2f"|format(scores.get(idea.id, 0)) }}
+
+**Problem:** {{ idea.problem_statement }}
+
+**Target Market:** {{ idea.target_market }}
+
+**Revenue Model:** {{ idea.revenue_model }}
+
+{% if idea.estimated_tam %}**TAM:** {{ idea.estimated_tam }}{% endif %}
+
+{% if mvp_plans.get(idea.id) %}
+### MVP Plan
+
+**Complexity:** {{ mvp_plans[idea.id].complexity_rating.value }}
+
+**Estimated Cost:** ${{ "%.0f"|format(mvp_plans[idea.id].estimated_cost_usd) }}
+
+**Core Features:**
+{% for feature in mvp_plans[idea.id].core_features %}
+- [{{ feature.priority.value.upper() }}] {{ feature.name }}: {{ feature.description }}
+{% endfor %}
+{% endif %}
+
+{% if gtm_plans.get(idea.id) %}
+### GTM Plan
+
+**ICP:** {{ gtm_plans[idea.id].icp }}
+
+**Positioning:** {{ gtm_plans[idea.id].positioning }}
+
+**First 100 Customers:** {{ gtm_plans[idea.id].first_100_playbook }}
+{% endif %}
+
+{% if rebuttals.get(idea.id) %}
+### Devil's Advocate
+
+**Severity:** {{ rebuttals[idea.id].severity.value }}
+
+**Survivability:** {{ "%.0f"|format(rebuttals[idea.id].overall_survivability * 100) }}%
+
+**Challenges:**
+{% for challenge in rebuttals[idea.id].challenges %}
+- {{ challenge.argument }}
+{% endfor %}
+
+**Mitigations:**
+{% for m in rebuttals[idea.id].suggested_mitigations %}
+- {{ m }}
+{% endfor %}
+{% endif %}
+
+---
+{% endfor %}
