@@ -93,11 +93,11 @@ Each idea from Layer 1 is evaluated concurrently by five specialist critic agent
 | **Competitive Moat** | Analyzes defensibility: network effects, data moats, switching costs, regulatory barriers. Flags commodity risk. | In: `BusinessIdea` · Out: `Review` (score 1–10, rationale) | Crunchbase, patent search, LLM |
 | **Financial Viability** | Unit economics sanity check: estimated CAC, LTV, margin structure, path to ramen profitability. | In: `BusinessIdea` · Out: `Review` (score 1–10, rationale) | Pricing benchmarks, LLM |
 | **Risk Assessor** | Red-teams the idea: regulatory risk, single points of failure, ethical concerns, market timing risk. | In: `BusinessIdea` · Out: `Review` (score 1–10, rationale) | Regulatory databases, LLM |
-| **Review Synthesizer** | Fan-in node. Aggregates all reviewer scores using a weighted formula. Ranks ideas, drops those below threshold, passes top K to Layer 3. | In: `dict[idea_id, list[Review]]` · Out: `top_ideas[]`, `scores[]` | Scoring algorithm (no LLM) |
+| **Review Synthesizer** | Fan-in node. Aggregates all reviewer scores using a weighted formula. Ranks ideas, drops those below threshold, passes top K to Layer 3. | In: `list[Review]` · Out: `top_ideas[]`, `scores[]` | Scoring algorithm (no LLM) |
 
 ### 3.4 Layer 3 — MVP Scope & GTM Strategy
 
-For each idea that passed Layer 2's filter, two agents run in parallel (via LangGraph parallel branches), then a composer merges their outputs.
+For each idea that passed Layer 2's filter, two agents run concurrently (via `asyncio.gather()` inside each per-idea node), then a composer merges their outputs.
 
 | Agent | Responsibility | Inputs / Outputs | Tools / Model |
 |---|---|---|---|
@@ -112,7 +112,7 @@ The final layer stress-tests plans and generates the deliverable. Fully autonomo
 | Agent | Responsibility | Inputs / Outputs | Tools / Model |
 |---|---|---|---|
 | **Devil's Advocate** | Adversarial review. Challenges every plan: "What if a big player copies this in 2 weeks?" Forces plans to address weaknesses or get downranked. | In: `BusinessPlan` · Out: `Rebuttal` | LLM |
-| **Report Generator** | Formats all artifacts into a structured deliverable: markdown report or PDF with idea cards, scores, MVP specs, GTM plans, and rebuttals. | In: `PipelineState` (full) · Out: `Report` (markdown/PDF) | Jinja2 templates, markdown renderer |
+| **Report Generator** | Formats all artifacts into a structured deliverable: markdown or JSON report with idea cards, scores, MVP specs, GTM plans, and rebuttals. | In: `PipelineState` (full) · Out: `Report` (markdown/JSON) | Jinja2 templates |
 
 ---
 
@@ -127,7 +127,7 @@ The top-level state object that flows through the entire graph:
 | Field | Populated By | Description |
 |---|---|---|
 | `ideas: list[BusinessIdea]` | Layer 1 output | Candidate ideas with structured metadata |
-| `reviews: dict[str, list[Review]]` | Layer 2 intermediate | Mapping of idea_id to list of critic reviews |
+| `reviews: list[Review]` | Layer 2 intermediate | Flat list of all critic reviews (accumulated via `operator.add` reducer) |
 | `scores: dict[str, float]` | Layer 2 output | Weighted aggregate score per idea (0.0–1.0) |
 | `top_ideas: list[str]` | Layer 2 output | IDs of ideas passing the filter threshold |
 | `mvp_plans: dict[str, MVPPlan]` | Layer 3 output | MVP specification per surviving idea |
@@ -231,9 +231,19 @@ def route_to_reviewers(state: PipelineState) -> list[Send]:
     return sends
 ```
 
-### 5.3 Parallel Branches
+### 5.3 Concurrent Planning with asyncio.gather()
 
-Layer 3 uses standard LangGraph parallel branches (not `Send()`) to run the MVP Architect and GTM Strategist concurrently for each idea. Both nodes read from the same state and write to different keys (`mvp_plans` and `gtm_plans`), avoiding write conflicts. The Business Plan Composer node waits for both to complete before executing.
+Layer 3 uses a `Send()` fan-out to create one planning node per surviving idea. Inside each `plan_idea_node`, the MVP Architect and GTM Strategist are invoked concurrently using `asyncio.gather()`, keeping both calls within a single LangGraph node to avoid the write-conflict complexity of parallel branches. The Business Plan Composer then merges their outputs into a `BusinessPlan`.
+
+```python
+async def plan_idea_node(state: PlanningNodeState) -> dict:
+    mvp_plan, gtm_plan = await asyncio.gather(
+        mvp_architect.invoke_mvp(idea, reviews),
+        gtm_strategist.invoke_gtm(idea, reviews),
+    )
+    business_plan = await composer.invoke_plan(idea, mvp_plan, gtm_plan)
+    return {"mvp_plans": {idea.id: mvp_plan}, "gtm_plans": {idea.id: gtm_plan}, ...}
+```
 
 ### 5.4 Conditional Retry Edge
 
@@ -305,7 +315,7 @@ All pipeline behavior is controlled via a `PipelineConfig` Pydantic model passed
 | `max_retries` | `int` | `2` | Maximum retry loops if no ideas pass the threshold |
 | `reviewer_weights` | `dict` | See §6.1 | Custom weights for the scoring formula |
 | `model_name` | `str` | *(required)* | LLM model for all agents (overridable per agent) |
-| `output_format` | `str` | `markdown` | Final report format: markdown \| pdf \| json |
+| `output_format` | `str` | `markdown` | Final report format: `markdown` \| `json` |
 
 ---
 
@@ -353,7 +363,7 @@ Approximate per-run cost assuming 8 candidate ideas with 3 surviving to Layer 3 
 | Runtime | Python 3.11+, asyncio for parallel execution |
 | Package Management | uv |
 | Configuration | Pydantic Settings with `.env` file support |
-| Report Generation | Jinja2 templates + markdown renderer (WeasyPrint for PDF) |
+| Report Generation | Jinja2 templates (markdown + JSON output) |
 | Deployment | Docker container (uv-based), triggered via CLI, API endpoint, or cron |
 
 ---

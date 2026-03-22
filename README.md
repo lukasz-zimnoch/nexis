@@ -66,7 +66,7 @@ uv run nexis \
 | `score_threshold` | `0.55` | Minimum aggregate score to pass Layer 2 filter |
 | `max_retries` | `2` | Max retry loops if no ideas pass the threshold |
 | `model_name` | *(required)* | LLM model for all agents |
-| `output_format` | `markdown` | Final report format: `markdown` \| `json` (PDF deferred to v2) |
+| `output_format` | `markdown` | Final report format: `markdown` \| `json` |
 
 ## Project structure
 
@@ -111,7 +111,7 @@ nexis/
 - **Web search:** Tavily (primary), Serper (fallback)
 - **Checkpointing:** PostgresSaver via `langgraph-checkpoint-postgres` (production), SqliteSaver via `langgraph-checkpoint-sqlite` (development)
 - **Tracing:** LangSmith
-- **Reports:** Jinja2 templates (markdown + JSON; PDF deferred to v2)
+- **Reports:** Jinja2 templates (markdown + JSON)
 
 ## Cost estimate
 
