@@ -7,12 +7,12 @@ Nexis is an autonomous multi-agent business idea pipeline built on LangGraph. It
 ## Tech stack
 
 - **Python 3.11+** with `asyncio` for parallel execution; **uv** for dependency management
-- **LangGraph 0.3+** — StateGraph, Send API, subgraphs, checkpointing
+- **LangGraph 1.1+** — StateGraph, Send API, subgraphs, checkpointing
 - **LangChain** — `with_structured_output()` for structured LLM responses
 - **Pydantic v2** — all agent inputs/outputs and configuration are typed models
 - **LLM** — configurable via `model_name`; model TBD
 - **Tavily** (primary) / **Serper** (fallback) for web search
-- **PostgresSaver** (production) / **SqliteSaver** (development) for checkpointing
+- **PostgresSaver** via `langgraph-checkpoint-postgres` (production) / **SqliteSaver** via `langgraph-checkpoint-sqlite` (development) for checkpointing
 - **LangSmith** for tracing and cost attribution
 - **Jinja2** + **WeasyPrint** for report generation
 
@@ -37,7 +37,7 @@ The parent graph in `graph.py` owns `PipelineState` and handles the conditional 
 
 ## Development checkpointer
 
-Use `SqliteSaver` locally (set `DATABASE_URL=sqlite:///./nexis_dev.db` in `.env`). Never hardcode connection strings.
+Use `SqliteSaver` locally (set `CHECKPOINT_DB=./nexis_dev.db` in `.env`). `SqliteSaver.from_conn_string()` takes a file path, not a SQLAlchemy URL. Never hardcode connection strings.
 
 ## Testing
 
