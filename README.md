@@ -51,7 +51,7 @@ reports = run_pipeline(config)
 Or via CLI:
 
 ```bash
-uv run python -m nexis \
+uv run nexis \
   --prompt "B2B SaaS tools for small construction companies" \
   --model claude-sonnet-4-6
 ```
