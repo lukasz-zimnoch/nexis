@@ -10,7 +10,7 @@ Nexis is an autonomous multi-agent business idea pipeline built on LangGraph. It
 - **LangGraph 0.3+** — StateGraph, Send API, subgraphs, checkpointing
 - **LangChain** — `with_structured_output()` for structured LLM responses
 - **Pydantic v2** — all agent inputs/outputs and configuration are typed models
-- **Anthropic Claude Sonnet** — primary LLM for all agents
+- **LLM** — configurable via `model_name`; model TBD
 - **Tavily** (primary) / **Serper** (fallback) for web search
 - **PostgresSaver** (production) / **SqliteSaver** (development) for checkpointing
 - **LangSmith** for tracing and cost attribution

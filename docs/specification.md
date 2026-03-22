@@ -78,7 +78,7 @@ This layer is responsible for scanning external sources, identifying market oppo
 
 | Agent | Responsibility | Inputs / Outputs | Tools / Model |
 |---|---|---|---|
-| **Research Agent** | Primary ideation. Performs web search, synthesizes trends, generates N candidate ideas with structured metadata. | In: research prompt, config · Out: `list[BusinessIdea]` | Tavily/Serper search, web scraper, LLM (Claude Sonnet) |
+| **Research Agent** | Primary ideation. Performs web search, synthesizes trends, generates N candidate ideas with structured metadata. | In: research prompt, config · Out: `list[BusinessIdea]` | Tavily/Serper search, web scraper, LLM |
 | **Trend Scanner** | Sub-agent. Monitors HN, ProductHunt, Reddit, X for emerging patterns. Feeds real-time signals into Research Agent context. | In: keyword seeds · Out: `list[TrendSignal]` | RSS feeds, API scrapers, social listeners |
 | **Niche Validator** | Pre-filter. Checks search volume, identifies obvious incumbents, flags duplicates from prior runs. | In: `list[BusinessIdea]` · Out: `list[BusinessIdea]` (filtered) | Google Trends API, SimilarWeb, dedup cache |
 
@@ -101,9 +101,9 @@ For each idea that passed Layer 2's filter, two agents run in parallel (via Lang
 
 | Agent | Responsibility | Inputs / Outputs | Tools / Model |
 |---|---|---|---|
-| **MVP Architect** | Defines core features (MoSCoW), tech stack recommendation, data model sketch, 4–8 week sprint plan, and estimated build cost. | In: `BusinessIdea` + `Reviews` · Out: `MVPPlan` | LLM (Claude Sonnet), tech stack DB |
-| **GTM Strategist** | Defines ICP, positioning, channel strategy (SEO/community/paid), pricing model, launch sequence, first 100 customers playbook. | In: `BusinessIdea` + `Reviews` · Out: `GTMPlan` | LLM (Claude Sonnet), pricing benchmarks |
-| **Business Plan Composer** | Merges MVP scope + GTM into a cohesive plan per idea. Adds executive summary, key assumptions, success metrics. | In: `MVPPlan` + `GTMPlan` · Out: `BusinessPlan` | LLM (Claude Sonnet) |
+| **MVP Architect** | Defines core features (MoSCoW), tech stack recommendation, data model sketch, 4–8 week sprint plan, and estimated build cost. | In: `BusinessIdea` + `Reviews` · Out: `MVPPlan` | LLM, tech stack DB |
+| **GTM Strategist** | Defines ICP, positioning, channel strategy (SEO/community/paid), pricing model, launch sequence, first 100 customers playbook. | In: `BusinessIdea` + `Reviews` · Out: `GTMPlan` | LLM, pricing benchmarks |
+| **Business Plan Composer** | Merges MVP scope + GTM into a cohesive plan per idea. Adds executive summary, key assumptions, success metrics. | In: `MVPPlan` + `GTMPlan` · Out: `BusinessPlan` | LLM |
 
 ### 3.5 Layer 4 — Validation & Output
 
@@ -111,7 +111,7 @@ The final layer stress-tests plans and generates the deliverable. Fully autonomo
 
 | Agent | Responsibility | Inputs / Outputs | Tools / Model |
 |---|---|---|---|
-| **Devil's Advocate** | Adversarial review. Challenges every plan: "What if a big player copies this in 2 weeks?" Forces plans to address weaknesses or get downranked. | In: `BusinessPlan` · Out: `Rebuttal` | LLM (Claude Sonnet) |
+| **Devil's Advocate** | Adversarial review. Challenges every plan: "What if a big player copies this in 2 weeks?" Forces plans to address weaknesses or get downranked. | In: `BusinessPlan` · Out: `Rebuttal` | LLM |
 | **Report Generator** | Formats all artifacts into a structured deliverable: markdown report or PDF with idea cards, scores, MVP specs, GTM plans, and rebuttals. | In: `PipelineState` (full) · Out: `Report` (markdown/PDF) | Jinja2 templates, markdown renderer |
 
 ---
@@ -304,7 +304,7 @@ All pipeline behavior is controlled via a `PipelineConfig` Pydantic model passed
 | `score_threshold` | `float` | `0.55` | Minimum aggregate score to pass Layer 2 filter |
 | `max_retries` | `int` | `2` | Maximum retry loops if no ideas pass the threshold |
 | `reviewer_weights` | `dict` | See §6.1 | Custom weights for the scoring formula |
-| `model_name` | `str` | `claude-sonnet-4-20250514` | LLM model for all agents (overridable per agent) |
+| `model_name` | `str` | *(required)* | LLM model for all agents (overridable per agent) |
 | `output_format` | `str` | `markdown` | Final report format: markdown \| pdf \| json |
 | `enable_trend_scanner` | `bool` | `True` | Whether to run the Trend Scanner sub-agent |
 | `enable_devils_advocate` | `bool` | `True` | Whether to run adversarial validation in Layer 4 |
@@ -328,7 +328,7 @@ Every node emits structured trace events compatible with LangSmith. Each trace i
 
 ## 9. Cost Estimation
 
-Approximate per-run cost assuming Claude Sonnet as the primary model and 8 candidate ideas with 3 surviving to Layer 3:
+Approximate per-run cost assuming 8 candidate ideas with 3 surviving to Layer 3 (actual cost depends on the configured model):
 
 | Layer | LLM Calls | Est. Tokens | Est. Cost |
 |---|---|---|---|
@@ -347,7 +347,7 @@ Approximate per-run cost assuming Claude Sonnet as the primary model and 8 candi
 | Component | Technology |
 |---|---|
 | Orchestration | LangGraph 0.3+ (StateGraph, Send, subgraphs, checkpointing) |
-| LLM Provider | Anthropic Claude Sonnet (primary), configurable per agent |
+| LLM Provider | Configurable via `model_name` |
 | Structured Output | LangChain `with_structured_output()` + Pydantic v2 models |
 | Web Search | Tavily Search API (primary), Serper API (fallback) |
 | Checkpointing | PostgresSaver (production), SqliteSaver (development) |
