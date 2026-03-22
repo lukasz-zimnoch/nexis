@@ -353,9 +353,10 @@ Approximate per-run cost assuming 8 candidate ideas with 3 surviving to Layer 3 
 | Checkpointing | PostgresSaver (production), SqliteSaver (development) |
 | Tracing | LangSmith (integrated via LangChain callbacks) |
 | Runtime | Python 3.11+, asyncio for parallel execution |
+| Package Management | uv |
 | Configuration | Pydantic Settings with `.env` file support |
 | Report Generation | Jinja2 templates + markdown renderer (WeasyPrint for PDF) |
-| Deployment | Docker container, triggered via CLI, API endpoint, or cron |
+| Deployment | Docker container (uv-based), triggered via CLI, API endpoint, or cron |
 
 ---
 

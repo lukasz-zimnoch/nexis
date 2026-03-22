@@ -18,10 +18,10 @@ If all ideas in Layer 2 score below the threshold, the graph routes back to Laye
 
 ## Setup
 
-**Requirements:** Python 3.11+
+**Requirements:** Python 3.11+, [uv](https://docs.astral.sh/uv/)
 
 ```bash
-pip install -e .
+uv sync
 cp .env.example .env
 # Fill in ANTHROPIC_API_KEY, TAVILY_API_KEY, and DATABASE_URL
 ```
@@ -44,7 +44,7 @@ report = run_pipeline(config)
 Or via CLI:
 
 ```bash
-python -m nexis --prompt "B2B SaaS tools for small construction companies"
+uv run python -m nexis --prompt "B2B SaaS tools for small construction companies"
 ```
 
 ## Configuration

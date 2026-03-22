@@ -6,7 +6,7 @@ Nexis is an autonomous multi-agent business idea pipeline built on LangGraph. It
 
 ## Tech stack
 
-- **Python 3.11+** with `asyncio` for parallel execution
+- **Python 3.11+** with `asyncio` for parallel execution; **uv** for dependency management
 - **LangGraph 0.3+** — StateGraph, Send API, subgraphs, checkpointing
 - **LangChain** — `with_structured_output()` for structured LLM responses
 - **Pydantic v2** — all agent inputs/outputs and configuration are typed models
