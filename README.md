@@ -58,8 +58,6 @@ uv run python -m nexis --prompt "B2B SaaS tools for small construction companies
 | `max_retries` | `2` | Max retry loops if no ideas pass the threshold |
 | `model_name` | *(required)* | LLM model for all agents |
 | `output_format` | `markdown` | Final report format: `markdown` \| `pdf` \| `json` |
-| `enable_trend_scanner` | `true` | Run the Trend Scanner sub-agent |
-| `enable_devils_advocate` | `true` | Run adversarial validation in Layer 4 |
 
 ## Project structure
 

@@ -306,8 +306,6 @@ All pipeline behavior is controlled via a `PipelineConfig` Pydantic model passed
 | `reviewer_weights` | `dict` | See §6.1 | Custom weights for the scoring formula |
 | `model_name` | `str` | *(required)* | LLM model for all agents (overridable per agent) |
 | `output_format` | `str` | `markdown` | Final report format: markdown \| pdf \| json |
-| `enable_trend_scanner` | `bool` | `True` | Whether to run the Trend Scanner sub-agent |
-| `enable_devils_advocate` | `bool` | `True` | Whether to run adversarial validation in Layer 4 |
 
 ---
 
