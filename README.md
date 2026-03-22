@@ -26,6 +26,12 @@ cp .env.example .env
 # Fill in ANTHROPIC_API_KEY and TAVILY_API_KEY
 ```
 
+**Run tests:**
+
+```bash
+uv run pytest tests/ -k "not live"
+```
+
 ## Usage
 
 ```python
@@ -34,17 +40,20 @@ from nexis.config import PipelineConfig
 
 config = PipelineConfig(
     research_prompt="B2B SaaS tools for small construction companies",
+    model_name="claude-sonnet-4-6",
     num_ideas=8,
     top_k=3,
 )
 
-report = run_pipeline(config)
+reports = run_pipeline(config)
 ```
 
 Or via CLI:
 
 ```bash
-uv run python -m nexis --prompt "B2B SaaS tools for small construction companies"
+uv run python -m nexis \
+  --prompt "B2B SaaS tools for small construction companies" \
+  --model claude-sonnet-4-6
 ```
 
 ## Configuration
@@ -57,26 +66,41 @@ uv run python -m nexis --prompt "B2B SaaS tools for small construction companies
 | `score_threshold` | `0.55` | Minimum aggregate score to pass Layer 2 filter |
 | `max_retries` | `2` | Max retry loops if no ideas pass the threshold |
 | `model_name` | *(required)* | LLM model for all agents |
-| `output_format` | `markdown` | Final report format: `markdown` \| `pdf` \| `json` |
+| `output_format` | `markdown` | Final report format: `markdown` \| `json` (PDF deferred to v2) |
 
 ## Project structure
 
 ```
 nexis/
 ├── docs/
-│   └── specification.md   # Full technical specification
-├── src/
-│   ├── config.py          # PipelineConfig + settings
-│   ├── state.py           # PipelineState TypedDict + Pydantic models
-│   ├── graph.py           # Parent graph composition
-│   ├── layers/            # Layer subgraphs (research, review, planning, output)
-│   ├── agents/            # Agent implementations
-│   ├── tools/             # Search and trend scrapers
-│   └── templates/         # Jinja2 report templates
+│   └── specification.md      # Full technical specification
+├── src/nexis/
+│   ├── __init__.py            # run_pipeline / arun_pipeline API
+│   ├── __main__.py            # CLI entry point
+│   ├── config.py              # PipelineConfig settings
+│   ├── state.py               # PipelineState TypedDict + Pydantic models
+│   ├── graph.py               # Parent graph (retry logic, supervisor)
+│   ├── layers/                # Layer subgraphs
+│   │   ├── research.py        # Layer 1: trend scanning + idea generation
+│   │   ├── review.py          # Layer 2: Send() fan-out to 5 critics
+│   │   ├── planning.py        # Layer 3: MVP + GTM concurrent planning
+│   │   └── output.py          # Layer 4: validation + report generation
+│   ├── agents/                # Agent implementations
+│   │   ├── base.py            # BaseAgent (retry, structured output, timeout)
+│   │   ├── research.py        # ResearchAgent, TrendScanner, NicheValidator
+│   │   ├── reviewers.py       # 5 critic agents + ReviewSynthesizer
+│   │   ├── planners.py        # MVPArchitect, GTMStrategist, BusinessPlanComposer
+│   │   └── validators.py      # DevilsAdvocate, ReportGenerator
+│   ├── tools/
+│   │   ├── search.py          # Tavily search wrapper with backoff
+│   │   └── trends.py          # Site-scoped trend scraper
+│   └── templates/             # Jinja2 report templates
 └── tests/
-    ├── test_layers/        # Per-layer subgraph tests
-    ├── test_agents/        # Per-agent unit tests
-    └── test_integration.py # Full pipeline integration test
+    ├── test_agents/           # Per-agent unit tests (mocked LLM)
+    ├── test_layers/           # Per-layer subgraph tests
+    ├── test_graph.py          # Parent graph routing tests
+    ├── test_cli.py            # CLI argument parsing tests
+    └── test_integration.py    # Full pipeline smoke test (mocked + live)
 ```
 
 ## Tech stack
@@ -87,7 +111,7 @@ nexis/
 - **Web search:** Tavily (primary), Serper (fallback)
 - **Checkpointing:** PostgresSaver via `langgraph-checkpoint-postgres` (production), SqliteSaver via `langgraph-checkpoint-sqlite` (development)
 - **Tracing:** LangSmith
-- **Reports:** Jinja2 + WeasyPrint (PDF)
+- **Reports:** Jinja2 templates (markdown + JSON; PDF deferred to v2)
 
 ## Cost estimate
 
