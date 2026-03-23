@@ -10,6 +10,7 @@ from nexis.layers.planning import build_planning_subgraph
 from nexis.layers.research import build_research_subgraph
 from nexis.layers.review import build_review_subgraph
 from nexis.state import PipelineState
+from nexis.telemetry import instrument_node
 
 logger = logging.getLogger(__name__)
 
@@ -112,21 +113,21 @@ def build_graph(checkpointer=None) -> StateGraph:
 
     Args:
         checkpointer: Optional LangGraph checkpointer instance. Defaults to
-            MemorySaver when None. For production use, pass an SqliteSaver or
-            PostgresSaver instance (obtained from the context manager).
+            MemorySaver when None. For persistent checkpointing, pass an
+            SqliteSaver instance (obtained from the context manager).
     """
     from langgraph.checkpoint.memory import MemorySaver
 
     builder = StateGraph(PipelineState)
 
     # --- Nodes ---
-    builder.add_node("supervisor", supervisor_node)
+    builder.add_node("supervisor", instrument_node(supervisor_node, layer_id="orchestrator"))
     builder.add_node("research", build_research_subgraph())
     builder.add_node("review", build_review_subgraph())
     builder.add_node("planning", build_planning_subgraph())
     builder.add_node("output", build_output_subgraph())
-    builder.add_node("increment_iteration", increment_iteration_node)
-    builder.add_node("force_pass", force_pass_node)
+    builder.add_node("increment_iteration", instrument_node(increment_iteration_node, layer_id="orchestrator"))
+    builder.add_node("force_pass", instrument_node(force_pass_node, layer_id="orchestrator"))
 
     # --- Edges ---
     builder.add_edge(START, "supervisor")

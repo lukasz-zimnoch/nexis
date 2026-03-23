@@ -11,6 +11,7 @@ from typing_extensions import TypedDict
 
 from nexis.agents.reviewers import ReviewerAgent, ReviewSynthesizer, create_reviewer
 from nexis.config import PipelineConfig
+from nexis.telemetry import instrument_node
 from nexis.state import (
     BusinessIdea,
     BusinessPlan,
@@ -139,8 +140,8 @@ def build_review_subgraph():
     """Build and compile the Layer 2 review subgraph."""
     builder = StateGraph(ReviewLayerState)
 
-    builder.add_node("review_node", review_node)
-    builder.add_node("synthesize_node", synthesize_node)
+    builder.add_node("review_node", instrument_node(review_node, layer_id="review"))
+    builder.add_node("synthesize_node", instrument_node(synthesize_node, layer_id="review"))
 
     builder.add_conditional_edges(START, route_to_reviewers, ["review_node"])
     builder.add_edge("review_node", "synthesize_node")

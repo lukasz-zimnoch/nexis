@@ -10,6 +10,7 @@ from typing_extensions import TypedDict
 
 from nexis.agents.research import NicheValidator, ResearchAgent, TrendScanner
 from nexis.config import PipelineConfig
+from nexis.telemetry import instrument_node
 from nexis.state import (
     BusinessIdea,
     BusinessPlan,
@@ -150,9 +151,9 @@ def build_research_subgraph():
     """Build and compile the Layer 1 research subgraph."""
     graph = StateGraph(ResearchLayerState)
 
-    graph.add_node("trend_scanner_node", trend_scanner_node)
-    graph.add_node("research_agent_node", research_agent_node)
-    graph.add_node("niche_validator_node", niche_validator_node)
+    graph.add_node("trend_scanner_node", instrument_node(trend_scanner_node, layer_id="research"))
+    graph.add_node("research_agent_node", instrument_node(research_agent_node, layer_id="research"))
+    graph.add_node("niche_validator_node", instrument_node(niche_validator_node, layer_id="research"))
 
     graph.add_edge(START, "trend_scanner_node")
     graph.add_edge("trend_scanner_node", "research_agent_node")

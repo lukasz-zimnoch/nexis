@@ -5,6 +5,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+
+def _wrap(parsed):
+    """Wrap a parsed result in the include_raw=True dict format."""
+    raw = MagicMock()
+    raw.usage_metadata = {"input_tokens": 10, "output_tokens": 20, "total_tokens": 30}
+    return {"parsed": parsed, "raw": raw, "parsing_error": None}
+
 from nexis.agents.research import (
     NicheValidator,
     NicheValidatorOutput,
@@ -60,7 +67,7 @@ class TestResearchAgent:
             mock_llm = MagicMock()
             mock_llm.bind_tools.return_value = mock_llm
             mock_llm.with_structured_output.return_value = mock_llm
-            mock_llm.ainvoke = AsyncMock(return_value=expected_output)
+            mock_llm.ainvoke = AsyncMock(return_value=_wrap(expected_output))
             mock_init.return_value = mock_llm
 
             with patch.object(
@@ -97,7 +104,7 @@ class TestResearchAgent:
             mock_llm = MagicMock()
             mock_llm.bind_tools.return_value = mock_llm
             mock_llm.with_structured_output.return_value = mock_llm
-            mock_llm.ainvoke = AsyncMock(return_value=expected_output)
+            mock_llm.ainvoke = AsyncMock(return_value=_wrap(expected_output))
             mock_init.return_value = mock_llm
 
             agent = ResearchAgent.__new__(ResearchAgent)
@@ -140,7 +147,7 @@ class TestTrendScanner:
             mock_llm = MagicMock()
             mock_llm.bind_tools.return_value = mock_llm
             mock_llm.with_structured_output.return_value = mock_llm
-            mock_llm.ainvoke = AsyncMock(return_value=expected_output)
+            mock_llm.ainvoke = AsyncMock(return_value=_wrap(expected_output))
             mock_init.return_value = mock_llm
 
             agent = TrendScanner.__new__(TrendScanner)
@@ -167,7 +174,7 @@ class TestTrendScanner:
             mock_llm = MagicMock()
             mock_llm.bind_tools.return_value = mock_llm
             mock_llm.with_structured_output.return_value = mock_llm
-            mock_llm.ainvoke = AsyncMock(return_value=expected_output)
+            mock_llm.ainvoke = AsyncMock(return_value=_wrap(expected_output))
             mock_init.return_value = mock_llm
 
             agent = TrendScanner.__new__(TrendScanner)
@@ -208,7 +215,7 @@ class TestNicheValidator:
             mock_llm = MagicMock()
             mock_llm.bind_tools.return_value = mock_llm
             mock_llm.with_structured_output.return_value = mock_llm
-            mock_llm.ainvoke = AsyncMock(return_value=expected_output)
+            mock_llm.ainvoke = AsyncMock(return_value=_wrap(expected_output))
             mock_init.return_value = mock_llm
 
             agent = NicheValidator.__new__(NicheValidator)
@@ -236,7 +243,7 @@ class TestNicheValidator:
             mock_llm = MagicMock()
             mock_llm.bind_tools.return_value = mock_llm
             mock_llm.with_structured_output.return_value = mock_llm
-            mock_llm.ainvoke = AsyncMock(return_value=expected_output)
+            mock_llm.ainvoke = AsyncMock(return_value=_wrap(expected_output))
             mock_init.return_value = mock_llm
 
             agent = NicheValidator.__new__(NicheValidator)

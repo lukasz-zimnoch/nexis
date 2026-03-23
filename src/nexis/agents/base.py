@@ -3,11 +3,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from typing import Any, TypeVar
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, ValidationError
+
+from nexis.telemetry import log_llm_call
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +36,7 @@ class BaseAgent:
         llm = init_chat_model(model_name)
         if tools:
             llm = llm.bind_tools(tools)
-        self._llm = llm.with_structured_output(output_schema)
+        self._llm = llm.with_structured_output(output_schema, include_raw=True)
 
     async def invoke(self, input_data: dict[str, Any]) -> T:
         """Invoke the agent with retry on validation failure."""
@@ -64,12 +67,50 @@ class BaseAgent:
                     attempt + 1,
                     self.max_retries + 1,
                 )
-                result = await asyncio.wait_for(
+                t0 = time.perf_counter()
+                raw_result = await asyncio.wait_for(
                     self._llm.ainvoke(messages),
                     timeout=120,
                 )
+                latency_ms = (time.perf_counter() - t0) * 1000
+
+                parsed = raw_result["parsed"]
+                raw_msg = raw_result["raw"]
+                parsing_error = raw_result.get("parsing_error")
+
+                usage = getattr(raw_msg, "usage_metadata", None) or {}
+                if isinstance(usage, dict):
+                    input_tokens = usage.get("input_tokens", 0)
+                    output_tokens = usage.get("output_tokens", 0)
+                    total_tokens = usage.get("total_tokens", 0)
+                else:
+                    input_tokens = getattr(usage, "input_tokens", 0)
+                    output_tokens = getattr(usage, "output_tokens", 0)
+                    total_tokens = getattr(usage, "total_tokens", 0)
+
+                log_llm_call(
+                    agent=self.__class__.__name__,
+                    model=self.model_name,
+                    latency_ms=latency_ms,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    total_tokens=total_tokens,
+                    attempt=attempt + 1,
+                    success=parsing_error is None,
+                )
+
+                if parsing_error is not None:
+                    last_error = str(parsing_error)
+                    logger.warning(
+                        "%s parsing error on attempt %d: %s",
+                        self.__class__.__name__,
+                        attempt + 1,
+                        parsing_error,
+                    )
+                    continue
+
                 logger.debug("%s succeeded on attempt %d", self.__class__.__name__, attempt + 1)
-                return result  # type: ignore[return-value]
+                return parsed  # type: ignore[return-value]
             except asyncio.TimeoutError:
                 last_error = "Request timed out after 120 seconds"
                 logger.error("%s timed out on attempt %d", self.__class__.__name__, attempt + 1)

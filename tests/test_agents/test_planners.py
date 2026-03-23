@@ -5,6 +5,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+
+def _wrap(parsed):
+    """Wrap a parsed result in the include_raw=True dict format."""
+    raw = MagicMock()
+    raw.usage_metadata = {"input_tokens": 10, "output_tokens": 20, "total_tokens": 30}
+    return {"parsed": parsed, "raw": raw, "parsing_error": None}
+
 from nexis.agents.planners import BusinessPlanComposer, GTMStrategist, MVPArchitect
 from nexis.state import (
     BusinessPlan,
@@ -61,7 +68,7 @@ async def test_mvp_architect_returns_mvp_plan(
         estimated_cost_usd=3000.0,
         complexity_rating=ComplexityRating.low,
     )
-    mock_llm_chain.ainvoke = AsyncMock(return_value=expected)
+    mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(expected))
 
     architect = MVPArchitect(model_name="claude-sonnet-4-6", max_retries=0)
     result = await architect.invoke_mvp(sample_business_idea, [sample_review])
@@ -78,7 +85,7 @@ async def test_mvp_architect_handles_llm_failure(
 ):
     """When the LLM returns a plan with failure_reason set, invoke_mvp surfaces it."""
     failed_plan = sample_mvp_plan.model_copy(update={"failure_reason": "LLM unavailable"})
-    mock_llm_chain.ainvoke = AsyncMock(return_value=failed_plan)
+    mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(failed_plan))
 
     architect = MVPArchitect(model_name="claude-sonnet-4-6", max_retries=0)
     result = await architect.invoke_mvp(sample_business_idea, [])
@@ -116,7 +123,7 @@ async def test_gtm_strategist_returns_gtm_plan(
         ],
         first_100_playbook="Post on HN, offer lifetime deal to first 100",
     )
-    mock_llm_chain.ainvoke = AsyncMock(return_value=expected)
+    mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(expected))
 
     strategist = GTMStrategist(model_name="claude-sonnet-4-6", max_retries=0)
     result = await strategist.invoke_gtm(sample_business_idea, [sample_review])
@@ -133,7 +140,7 @@ async def test_gtm_strategist_handles_llm_failure(
 ):
     """When the LLM returns a plan with failure_reason set, invoke_gtm surfaces it."""
     failed_plan = sample_gtm_plan.model_copy(update={"failure_reason": "timeout"})
-    mock_llm_chain.ainvoke = AsyncMock(return_value=failed_plan)
+    mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(failed_plan))
 
     strategist = GTMStrategist(model_name="claude-sonnet-4-6", max_retries=0)
     result = await strategist.invoke_gtm(sample_business_idea, [])
@@ -159,7 +166,7 @@ async def test_composer_returns_business_plan(
         mvp_plan=sample_mvp_plan,
         gtm_plan=sample_gtm_plan,
     )
-    mock_llm_chain.ainvoke = AsyncMock(return_value=expected)
+    mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(expected))
 
     composer = BusinessPlanComposer(model_name="claude-sonnet-4-6", max_retries=0)
     result = await composer.invoke_plan(sample_business_idea, sample_mvp_plan, sample_gtm_plan)
@@ -185,7 +192,7 @@ async def test_composer_with_partial_mvp_input_does_not_crash(
         mvp_plan=failed_mvp,
         gtm_plan=sample_gtm_plan,
     )
-    mock_llm_chain.ainvoke = AsyncMock(return_value=expected)
+    mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(expected))
 
     composer = BusinessPlanComposer(model_name="claude-sonnet-4-6", max_retries=0)
     # Must not raise
@@ -211,7 +218,7 @@ async def test_composer_with_partial_gtm_input_does_not_crash(
         mvp_plan=sample_mvp_plan,
         gtm_plan=failed_gtm,
     )
-    mock_llm_chain.ainvoke = AsyncMock(return_value=expected)
+    mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(expected))
 
     composer = BusinessPlanComposer(model_name="claude-sonnet-4-6", max_retries=0)
     result = await composer.invoke_plan(sample_business_idea, sample_mvp_plan, failed_gtm)

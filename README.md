@@ -109,8 +109,8 @@ nexis/
 - **LLM:** configurable via `model_name`
 - **Structured output:** LangChain `with_structured_output()` + Pydantic v2
 - **Web search:** Tavily (primary), Serper (fallback)
-- **Checkpointing:** PostgresSaver via `langgraph-checkpoint-postgres` (production), SqliteSaver via `langgraph-checkpoint-sqlite` (development)
-- **Tracing:** LangSmith
+- **Checkpointing:** SqliteSaver via `langgraph-checkpoint-sqlite`
+- **Tracing:** Structured logging (nexis.telemetry); LangSmith (opt-in via env vars)
 - **Reports:** Jinja2 templates (markdown + JSON)
 
 ## Cost estimate

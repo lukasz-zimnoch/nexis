@@ -10,6 +10,7 @@ from langgraph.types import Send
 from typing_extensions import TypedDict
 
 from nexis.agents.planners import BusinessPlanComposer, GTMStrategist, MVPArchitect
+from nexis.telemetry import instrument_node
 from nexis.state import (
     BusinessIdea,
     BusinessPlan,
@@ -97,7 +98,7 @@ def build_planning_subgraph() -> StateGraph:
     """Build and compile the Layer 3 planning subgraph."""
     builder = StateGraph(PipelineState)
 
-    builder.add_node("plan_idea_node", plan_idea_node)
+    builder.add_node("plan_idea_node", instrument_node(plan_idea_node, layer_id="planning"))
 
     # Conditional fan-out from START: if top_ideas is empty, goes straight to END
     builder.add_conditional_edges(START, route_to_planners, ["plan_idea_node"])

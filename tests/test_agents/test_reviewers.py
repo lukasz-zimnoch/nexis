@@ -5,6 +5,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+
+def _wrap(parsed):
+    """Wrap a parsed result in the include_raw=True dict format."""
+    raw = MagicMock()
+    raw.usage_metadata = {"input_tokens": 10, "output_tokens": 20, "total_tokens": 30}
+    return {"parsed": parsed, "raw": raw, "parsing_error": None}
+
 from nexis.agents.reviewers import ReviewSynthesizer, ReviewerAgent, create_reviewer
 from nexis.config import PipelineConfig
 from nexis.state import BusinessIdea, Review, ReviewerRole
@@ -98,7 +105,7 @@ async def test_reviewer_returns_correct_role_market(mock_llm_chain, idea_a):
         rationale="Big market",
         confidence=0.9,
     )
-    mock_llm_chain.ainvoke = AsyncMock(return_value=expected_review)
+    mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(expected_review))
 
     agent = ReviewerAgent(role=ReviewerRole.market, model_name="claude-sonnet-4-6")
     result = await agent.invoke_review(idea_a)
@@ -119,7 +126,7 @@ async def test_reviewer_returns_correct_role_technical(mock_llm_chain, idea_a):
         rationale="Moderate complexity",
         confidence=0.8,
     )
-    mock_llm_chain.ainvoke = AsyncMock(return_value=expected_review)
+    mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(expected_review))
 
     agent = ReviewerAgent(role=ReviewerRole.technical, model_name="claude-sonnet-4-6")
     result = await agent.invoke_review(idea_a)
@@ -139,7 +146,7 @@ async def test_reviewer_all_roles_via_factory(mock_llm_chain, idea_a):
             rationale=f"Review for {role.value}",
             confidence=0.75,
         )
-        mock_llm_chain.ainvoke = AsyncMock(return_value=expected_review)
+        mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(expected_review))
 
         agent = create_reviewer(role=role, model_name="claude-sonnet-4-6")
         result = await agent.invoke_review(idea_a)
@@ -158,7 +165,7 @@ async def test_reviewer_enforces_idea_id_and_role_on_success(mock_llm_chain, ide
         rationale="Good",
         confidence=0.95,
     )
-    mock_llm_chain.ainvoke = AsyncMock(return_value=wrong_review)
+    mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(wrong_review))
 
     agent = ReviewerAgent(role=ReviewerRole.financial, model_name="claude-sonnet-4-6")
     result = await agent.invoke_review(idea_a)
