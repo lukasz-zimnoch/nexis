@@ -8,6 +8,7 @@ from langgraph.graph import END, START, StateGraph
 
 from nexis.agents.validators import DevilsAdvocate, ReportGenerator
 from nexis.state import PipelineState
+from nexis.telemetry import instrument_node
 
 logger = logging.getLogger(__name__)
 
@@ -75,8 +76,8 @@ async def report_generator_node(state: PipelineState) -> dict:
 def build_output_subgraph():
     """Build and compile the Layer 4 output subgraph."""
     builder = StateGraph(PipelineState)
-    builder.add_node("devils_advocate", devils_advocate_node)
-    builder.add_node("report_generator", report_generator_node)
+    builder.add_node("devils_advocate", instrument_node(devils_advocate_node, layer_id="output"))
+    builder.add_node("report_generator", instrument_node(report_generator_node, layer_id="output"))
     builder.add_edge(START, "devils_advocate")
     builder.add_edge("devils_advocate", "report_generator")
     builder.add_edge("report_generator", END)

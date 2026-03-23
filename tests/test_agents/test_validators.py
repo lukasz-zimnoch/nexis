@@ -6,6 +6,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+
+def _wrap(parsed):
+    """Wrap a parsed result in the include_raw=True dict format."""
+    raw = MagicMock()
+    raw.usage_metadata = {"input_tokens": 10, "output_tokens": 20, "total_tokens": 30}
+    return {"parsed": parsed, "raw": raw, "parsing_error": None}
+
 from nexis.agents.validators import ReportGenerator
 from nexis.config import PipelineConfig
 from nexis.state import (
@@ -169,7 +176,7 @@ async def test_devils_advocate_returns_rebuttal_with_correct_idea_id(
     sample_rebuttal: Rebuttal,
 ):
     """DevilsAdvocate should return a Rebuttal whose idea_id matches the plan's idea_id."""
-    mock_llm_for_devils_advocate.ainvoke = AsyncMock(return_value=sample_rebuttal)
+    mock_llm_for_devils_advocate.ainvoke = AsyncMock(return_value=_wrap(sample_rebuttal))
 
     from nexis.agents.validators import DevilsAdvocate
 

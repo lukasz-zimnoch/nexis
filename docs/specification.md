@@ -268,7 +268,7 @@ All LLM-backed agents use LangChain's `with_structured_output()` to bind Pydanti
 
 ### 5.6 Checkpointing and Persistence
 
-The graph uses a `PostgresSaver` checkpointer (`SqliteSaver` for local development). This enables full state persistence at every node transition, allowing the pipeline to be resumed from any point after a crash, and providing a complete audit trail for debugging and analysis.
+The graph uses an `SqliteSaver` checkpointer. This enables full state persistence at every node transition, allowing the pipeline to be resumed from any point after a crash, and providing a complete audit trail for debugging and analysis.
 
 ---
 
@@ -323,7 +323,7 @@ All pipeline behavior is controlled via a `PipelineConfig` Pydantic model passed
 
 ### 8.1 Tracing
 
-Every node emits structured trace events compatible with LangSmith. Each trace includes: node name, layer ID, input/output state keys modified, latency (ms), token usage, and cost. This enables per-agent cost attribution and performance profiling.
+Every node emits structured JSON events via the `nexis.telemetry` logger. Each event includes: node name, layer ID, latency (ms), input/output state keys, and errors. LLM call events additionally capture agent name, model name, token usage (input/output/total), attempt number, and success status. When `LANGCHAIN_TRACING_V2=true`, LangChain's built-in integration forwards all traces to LangSmith automatically.
 
 ### 8.2 Error Handling Strategy
 
@@ -358,8 +358,8 @@ Approximate per-run cost assuming 8 candidate ideas with 3 surviving to Layer 3 
 | LLM Provider | Configurable via `model_name` |
 | Structured Output | LangChain `with_structured_output()` + Pydantic v2 models |
 | Web Search | Tavily Search API (primary), Serper API (fallback) |
-| Checkpointing | PostgresSaver via `langgraph-checkpoint-postgres` (production), SqliteSaver via `langgraph-checkpoint-sqlite` (development) |
-| Tracing | LangSmith (integrated via LangChain callbacks) |
+| Checkpointing | SqliteSaver via `langgraph-checkpoint-sqlite` |
+| Tracing | Structured logging via `nexis.telemetry`; LangSmith (opt-in via `LANGCHAIN_TRACING_V2`) |
 | Runtime | Python 3.11+, asyncio for parallel execution |
 | Package Management | uv |
 | Configuration | Pydantic Settings with `.env` file support |

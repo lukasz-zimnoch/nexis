@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 
 from nexis.config import PipelineConfig
@@ -13,6 +14,11 @@ def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    )
+
+    tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
+    logging.getLogger(__name__).info(
+        "LangSmith tracing %s", "enabled" if tracing_enabled else "disabled"
     )
 
     parser = argparse.ArgumentParser(

@@ -12,8 +12,8 @@ Nexis is an autonomous multi-agent business idea pipeline built on LangGraph. It
 - **Pydantic v2** — all agent inputs/outputs and configuration are typed models
 - **LLM** — configurable via `model_name`; model TBD
 - **Tavily** (primary) / **Serper** (fallback) for web search
-- **PostgresSaver** via `langgraph-checkpoint-postgres` (production) / **SqliteSaver** via `langgraph-checkpoint-sqlite` (development) for checkpointing
-- **LangSmith** for tracing and cost attribution
+- **SqliteSaver** via `langgraph-checkpoint-sqlite` for checkpointing
+- **Structured logging** (`nexis.telemetry`) for per-node and per-LLM-call telemetry; **LangSmith** for detailed tracing (opt-in via `LANGCHAIN_TRACING_V2` env var)
 - **Jinja2** for report generation (markdown + JSON output)
 
 ## Architecture
@@ -35,9 +35,9 @@ The parent graph in `graph.py` owns `PipelineState` and handles the conditional 
 - Each layer subgraph must be independently testable without running the full pipeline
 - Async-first: all agent methods should be `async def` and use `asyncio.gather()` for concurrency
 
-## Development checkpointer
+## Checkpointer
 
-Use `SqliteSaver` locally (set `CHECKPOINT_DB=./nexis_dev.db` in `.env`). `SqliteSaver.from_conn_string()` takes a file path, not a SQLAlchemy URL. Never hardcode connection strings.
+The pipeline uses `SqliteSaver` for checkpointing (set `CHECKPOINT_DB=./nexis_dev.db` in `.env`). `SqliteSaver.from_conn_string()` takes a file path, not a SQLAlchemy URL. Never hardcode connection strings.
 
 ## Testing
 
