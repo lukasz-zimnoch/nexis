@@ -8,7 +8,7 @@ The pipeline executes as a directed acyclic graph across four sequential layers:
 
 1. **Deep Research** — A Research Agent scans the web, identifies trends, and generates N candidate business ideas with structured metadata. A Trend Scanner monitors HN, ProductHunt, Reddit, and X for real-time signals. A Niche Validator pre-filters duplicates and obvious incumbents.
 
-2. **Parallel Review Panel** — Each idea is evaluated concurrently by five specialist critics (Market Analyst, Technical Feasibility, Competitive Moat, Financial Viability, Risk Assessor) using LangGraph's `Send()` API. A Review Synthesizer aggregates weighted scores and filters the top K ideas above a configurable threshold.
+2. **Parallel Review Panel** — Each idea is evaluated concurrently by six specialist critics (Market Analyst, Technical Feasibility, Competitive Moat, Financial Viability, Risk Assessor, AI Disruption Analyst) using LangGraph's `Send()` API. A Review Synthesizer aggregates weighted scores and filters the top K ideas above a configurable threshold.
 
 3. **MVP Scope & GTM Strategy** — For each surviving idea, an MVP Architect and GTM Strategist run in parallel. A Business Plan Composer merges their outputs into a cohesive plan.
 
@@ -82,13 +82,13 @@ nexis/
 │   ├── graph.py               # Parent graph (retry logic, supervisor)
 │   ├── layers/                # Layer subgraphs
 │   │   ├── research.py        # Layer 1: trend scanning + idea generation
-│   │   ├── review.py          # Layer 2: Send() fan-out to 5 critics
+│   │   ├── review.py          # Layer 2: Send() fan-out to 6 critics
 │   │   ├── planning.py        # Layer 3: MVP + GTM concurrent planning
 │   │   └── output.py          # Layer 4: validation + report generation
 │   ├── agents/                # Agent implementations
 │   │   ├── base.py            # BaseAgent (retry, structured output, timeout)
 │   │   ├── research.py        # ResearchAgent, TrendScanner, NicheValidator
-│   │   ├── reviewers.py       # 5 critic agents + ReviewSynthesizer
+│   │   ├── reviewers.py       # 6 critic agents + ReviewSynthesizer
 │   │   ├── planners.py        # MVPArchitect, GTMStrategist, BusinessPlanComposer
 │   │   └── validators.py      # DevilsAdvocate, ReportGenerator
 │   ├── tools/
@@ -115,7 +115,7 @@ nexis/
 
 ## Cost estimate
 
-~$2.50 per run (8 candidate ideas, 3 surviving to Layer 3), based on ~57 LLM calls and ~330K tokens. Search tool costs are additional.
+~$2.80 per run (8 candidate ideas, 3 surviving to Layer 3), based on ~65 LLM calls and ~370K tokens. Search tool costs are additional.
 
 ## Documentation
 
