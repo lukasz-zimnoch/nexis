@@ -84,7 +84,7 @@ This layer is responsible for scanning external sources, identifying market oppo
 
 ### 3.3 Layer 2 — Parallel Review Panel
 
-Each idea from Layer 1 is evaluated concurrently by six specialist critic agents using LangGraph's `Send()` API. This creates a dynamic fan-out of (N ideas × 6 critics) parallel executions, followed by a fan-in at the Review Synthesizer node.
+Each idea from Layer 1 is evaluated concurrently by six specialist critic agents using LangGraph's `Send()` API. This creates a dynamic fan-out of N ideas × 6 critics parallel executions, followed by a fan-in at the Review Synthesizer node.
 
 | Agent | Responsibility | Inputs / Outputs | Tools / Model |
 |---|---|---|---|
@@ -158,7 +158,7 @@ The top-level state object that flows through the entire graph:
 | Field | Type | Description |
 |---|---|---|
 | `idea_id` | `str` | Reference to the evaluated BusinessIdea |
-| `reviewer_role` | `str (enum)` | One of: market, technical, moat, financial, risk |
+| `reviewer_role` | `str (enum)` | One of: market, technical, moat, financial, risk, ai_resilience |
 | `score` | `int (1–10)` | Numeric rating for this dimension |
 | `rationale` | `str` | Structured reasoning for the score |
 | `red_flags` | `list[str]` | Specific concerns or dealbreakers |
@@ -216,7 +216,7 @@ Conditional edge from `review_subgraph`: if `max(scores) < threshold` AND `itera
 
 ### 5.2 Fan-Out with Send()
 
-Layer 2 uses LangGraph's `Send()` API to dynamically spawn parallel review tasks. The review subgraph's entry node iterates over all ideas and all reviewer roles, emitting a `Send()` call for each combination. This creates N × 5 parallel executions that write their `Review` objects into the shared state.
+Layer 2 uses LangGraph's `Send()` API to dynamically spawn parallel review tasks. The review subgraph's entry node iterates over all ideas and all reviewer roles, emitting a `Send()` call for each combination. This creates N × 6 parallel executions that write their `Review` objects into the shared state.
 
 The fan-in is handled by the Review Synthesizer node, which has a conditional edge that only activates once all `Send()` tasks have completed (LangGraph manages this automatically via its internal task counter).
 
@@ -316,7 +316,7 @@ All pipeline behavior is controlled via a `PipelineConfig` Pydantic model passed
 | `score_threshold` | `float` | `0.55` | Minimum aggregate score to pass Layer 2 filter |
 | `max_retries` | `int` | `2` | Maximum retry loops if no ideas pass the threshold |
 | `reviewer_weights` | `dict` | See §6.1 | Custom weights for the scoring formula |
-| `model_name` | `str` | *(required)* | LLM model for all agents (overridable per agent) |
+| `agent_models` | `dict[str, str]` | Per-agent defaults from `nexis/models.py` | Maps agent keys (e.g. `"research_agent"`, `"reviewer_market"`) to OpenRouter-format model IDs. Set `OPENROUTER_API_KEY` to route all calls through OpenRouter; otherwise falls back to direct provider clients. |
 | `output_format` | `str` | `markdown` | Final report format: `markdown` \| `json` |
 
 ---
@@ -357,7 +357,7 @@ Approximate per-run cost assuming 8 candidate ideas with 3 surviving to Layer 3 
 | Component | Technology |
 |---|---|
 | Orchestration | LangGraph 1.1+ (StateGraph, Send, subgraphs, checkpointing) |
-| LLM Provider | Configurable via `model_name` |
+| LLM Provider | Per-agent model IDs in `nexis/models.py`; routed via OpenRouter (`OPENROUTER_API_KEY`) or direct provider fallback |
 | Structured Output | LangChain `with_structured_output()` + Pydantic v2 models |
 | Web Search | Tavily Search API (primary), Serper API (fallback) |
 | Checkpointing | SqliteSaver via `langgraph-checkpoint-sqlite` |
@@ -378,6 +378,7 @@ nexis/
 ├── .env.example
 ├── src/
 │   ├── config.py              # PipelineConfig + settings
+│   ├── models.py              # Per-agent model assignments (single source of truth)
 │   ├── state.py               # PipelineState TypedDict + Pydantic models
 │   ├── graph.py               # Parent graph composition
 │   ├── layers/
@@ -386,7 +387,7 @@ nexis/
 │   │   ├── planning.py        # Layer 3 subgraph + planning agents
 │   │   └── output.py          # Layer 4 subgraph + report generator
 │   ├── agents/
-│   │   ├── base.py            # BaseAgent with retry + structured output
+│   │   ├── base.py            # BaseAgent with retry, structured output, OpenRouter routing
 │   │   ├── research.py        # ResearchAgent, TrendScanner, NicheValidator
 │   │   ├── reviewers.py       # All 5 critic agents
 │   │   ├── planners.py        # MVPArchitect, GTMStrategist, Composer
@@ -415,5 +416,4 @@ Potential enhancements for subsequent iterations:
 - **Domain specialization:** Add pluggable domain adapters (e.g., SaaS, marketplace, developer tools, Web3) that customize each agent's prompts and evaluation criteria for specific verticals.
 - **Competitive intelligence layer:** Add a dedicated agent between Layer 1 and Layer 2 that performs deep competitive analysis (Crunchbase funding data, app store rankings, SEO analysis) and enriches each idea with competitive landscape data.
 - **Automated validation:** After Layer 4, optionally trigger a Landing Page Generator agent that creates a simple validation page and a Distribution Agent that posts to relevant communities to test demand signal before any code is written.
-- **Multi-model routing:** Use cheaper/faster models (Haiku) for pre-filtering and simple scoring, and route only complex reasoning tasks (research synthesis, GTM strategy) to more capable models (Sonnet/Opus).
 - **A2A protocol integration:** Expose each layer as an A2A-compatible agent, enabling external systems to invoke individual layers or swap in alternative implementations built with other frameworks.
