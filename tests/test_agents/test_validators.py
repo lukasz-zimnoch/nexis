@@ -45,7 +45,6 @@ from nexis.state import (
 def sample_config() -> PipelineConfig:
     return PipelineConfig(
         research_prompt="Find SaaS opportunities",
-        model_name="claude-sonnet-4-6",
         num_ideas=4,
         top_k=2,
         score_threshold=0.55,
@@ -276,7 +275,6 @@ def test_report_generator_json_format(
     """JSON format report should produce valid JSON with top_ideas and scores."""
     config = PipelineConfig(
         research_prompt="test",
-        model_name="claude-sonnet-4-6",
         output_format="json",
     )
     state = _make_state(config, sample_idea)

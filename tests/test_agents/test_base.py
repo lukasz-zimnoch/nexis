@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from nexis.agents.base import BaseAgent, _minimal_value
+from nexis.agents.base import BaseAgent, _minimal_value, build_llm
 
 
 class SimpleOutput(BaseModel):
@@ -136,6 +136,23 @@ def test_format_input_with_pydantic_model():
     result = agent._format_input({"key": "value", "model": M()})
     assert "key: value" in result
     assert "model:" in result
+
+
+def test_build_llm_routes_to_openrouter_when_key_set(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
+    with patch("nexis.agents.base.ChatOpenAI") as mock:
+        import nexis.agents.base as base
+        base.build_llm("anthropic/claude-opus-4-6")
+    mock.assert_called_once()
+    assert mock.call_args.kwargs["base_url"] == "https://openrouter.ai/api/v1"
+
+
+def test_build_llm_falls_back_to_init_chat_model(monkeypatch):
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    with patch("nexis.agents.base.init_chat_model") as mock:
+        import nexis.agents.base as base
+        base.build_llm("anthropic/claude-sonnet-4-6")
+    mock.assert_called_once_with("claude-sonnet-4-6", model_provider="anthropic")
 
 
 @pytest.mark.asyncio

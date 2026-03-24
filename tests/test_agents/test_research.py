@@ -77,7 +77,7 @@ class TestResearchAgent:
                 create=True,
             ):
                 agent = ResearchAgent.__new__(ResearchAgent)
-                agent.model_name = sample_config.model_name
+                agent.model_name = "claude-sonnet-4-6"
                 agent.output_schema = ResearchOutput
                 agent.system_prompt = "test"
                 agent.max_retries = 0
@@ -108,7 +108,7 @@ class TestResearchAgent:
             mock_init.return_value = mock_llm
 
             agent = ResearchAgent.__new__(ResearchAgent)
-            agent.model_name = sample_config.model_name
+            agent.model_name = "claude-sonnet-4-6"
             agent.output_schema = ResearchOutput
             agent.system_prompt = "test"
             agent.max_retries = 0
@@ -151,7 +151,7 @@ class TestTrendScanner:
             mock_init.return_value = mock_llm
 
             agent = TrendScanner.__new__(TrendScanner)
-            agent.model_name = sample_config.model_name
+            agent.model_name = "claude-sonnet-4-6"
             agent.output_schema = TrendScannerOutput
             agent.system_prompt = "test"
             agent.max_retries = 0
@@ -178,7 +178,7 @@ class TestTrendScanner:
             mock_init.return_value = mock_llm
 
             agent = TrendScanner.__new__(TrendScanner)
-            agent.model_name = sample_config.model_name
+            agent.model_name = "claude-sonnet-4-6"
             agent.output_schema = TrendScannerOutput
             agent.system_prompt = "test"
             agent.max_retries = 0
@@ -219,7 +219,7 @@ class TestNicheValidator:
             mock_init.return_value = mock_llm
 
             agent = NicheValidator.__new__(NicheValidator)
-            agent.model_name = sample_config.model_name
+            agent.model_name = "claude-sonnet-4-6"
             agent.output_schema = NicheValidatorOutput
             agent.system_prompt = "test"
             agent.max_retries = 0
@@ -247,7 +247,7 @@ class TestNicheValidator:
             mock_init.return_value = mock_llm
 
             agent = NicheValidator.__new__(NicheValidator)
-            agent.model_name = sample_config.model_name
+            agent.model_name = "claude-sonnet-4-6"
             agent.output_schema = NicheValidatorOutput
             agent.system_prompt = "test"
             agent.max_retries = 0
