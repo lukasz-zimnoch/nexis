@@ -28,7 +28,6 @@ def make_state(
 
     config = PipelineConfig(
         research_prompt=research_prompt,
-        model_name="claude-sonnet-4-6",
         top_k=top_k,
         max_retries=max_retries,
     )

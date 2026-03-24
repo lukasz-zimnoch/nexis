@@ -36,7 +36,7 @@ from nexis.state import (
 @pytest.fixture
 def mock_llm_chain():
     """Patch init_chat_model so no real LLM is instantiated."""
-    with patch("nexis.agents.base.init_chat_model") as mock_init:
+    with patch("nexis.agents.base.ChatOpenAI") as mock_init:
         chain = MagicMock()
         mock_init.return_value.with_structured_output.return_value = chain
         yield chain

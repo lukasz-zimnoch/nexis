@@ -22,11 +22,15 @@ from nexis.state import (
 )
 
 
+@pytest.fixture(autouse=True)
+def set_openrouter_key(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
+
+
 @pytest.fixture
 def sample_config() -> PipelineConfig:
     return PipelineConfig(
         research_prompt="Find SaaS opportunities in developer tools",
-        model_name="claude-sonnet-4-6",
         num_ideas=4,
         top_k=2,
         score_threshold=0.55,

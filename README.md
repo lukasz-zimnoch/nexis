@@ -23,7 +23,7 @@ If all ideas in Layer 2 score below the threshold, the graph routes back to Laye
 ```bash
 uv sync
 cp .env.example .env
-# Fill in ANTHROPIC_API_KEY and TAVILY_API_KEY
+# Fill in OPENROUTER_API_KEY and TAVILY_API_KEY
 ```
 
 **Run tests:**
@@ -40,7 +40,6 @@ from nexis.config import PipelineConfig
 
 config = PipelineConfig(
     research_prompt="B2B SaaS tools for small construction companies",
-    model_name="claude-sonnet-4-6",
     num_ideas=8,
     top_k=3,
 )
@@ -51,9 +50,13 @@ reports = run_pipeline(config)
 Or via CLI:
 
 ```bash
-uv run nexis \
-  --prompt "B2B SaaS tools for small construction companies" \
-  --model claude-sonnet-4-6
+uv run nexis --prompt "B2B SaaS tools for small construction companies"
+```
+
+To override all agents with a single model for quick testing:
+
+```bash
+uv run nexis --prompt "..." --model anthropic/claude-haiku-4-5
 ```
 
 ## Configuration
@@ -65,7 +68,7 @@ uv run nexis \
 | `top_k` | `3` | Max ideas passed from Layer 2 to Layer 3 |
 | `score_threshold` | `0.55` | Minimum aggregate score to pass Layer 2 filter |
 | `max_retries` | `2` | Max retry loops if no ideas pass the threshold |
-| `model_name` | *(required)* | LLM model for all agents |
+| `agent_models` | *(per-agent defaults from `nexis/models.py`)* | Dict mapping agent keys to OpenRouter model IDs; use `--model` CLI flag to override all agents at once |
 | `output_format` | `markdown` | Final report format: `markdown` \| `json` |
 
 ## Project structure
@@ -78,6 +81,7 @@ nexis/
 │   ├── __init__.py            # run_pipeline / arun_pipeline API
 │   ├── __main__.py            # CLI entry point
 │   ├── config.py              # PipelineConfig settings
+│   ├── models.py              # Per-agent model assignments (single source of truth)
 │   ├── state.py               # PipelineState TypedDict + Pydantic models
 │   ├── graph.py               # Parent graph (retry logic, supervisor)
 │   ├── layers/                # Layer subgraphs
@@ -86,7 +90,7 @@ nexis/
 │   │   ├── planning.py        # Layer 3: MVP + GTM concurrent planning
 │   │   └── output.py          # Layer 4: validation + report generation
 │   ├── agents/                # Agent implementations
-│   │   ├── base.py            # BaseAgent (retry, structured output, timeout)
+│   │   ├── base.py            # BaseAgent (retry, structured output, timeout, OpenRouter routing)
 │   │   ├── research.py        # ResearchAgent, TrendScanner, NicheValidator
 │   │   ├── reviewers.py       # 6 critic agents + ReviewSynthesizer
 │   │   ├── planners.py        # MVPArchitect, GTMStrategist, BusinessPlanComposer
@@ -106,7 +110,7 @@ nexis/
 ## Tech stack
 
 - **Orchestration:** LangGraph 1.1+ (StateGraph, Send, subgraphs, checkpointing)
-- **LLM:** configurable via `model_name`
+- **LLM:** per-agent model assignments in `nexis/models.py`; all calls routed through OpenRouter (`OPENROUTER_API_KEY` required)
 - **Structured output:** LangChain `with_structured_output()` + Pydantic v2
 - **Web search:** Tavily (primary), Serper (fallback)
 - **Checkpointing:** SqliteSaver via `langgraph-checkpoint-sqlite`

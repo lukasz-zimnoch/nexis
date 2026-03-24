@@ -105,7 +105,7 @@ async def review_node(state: ReviewNodeState) -> dict:
 
     agent: ReviewerAgent = create_reviewer(
         role=role,
-        model_name=config.model_name,
+        model_name=config.model_for(f"reviewer_{role.value}"),
         max_retries=config.max_retries,
     )
 

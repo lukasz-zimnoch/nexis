@@ -45,7 +45,6 @@ from nexis.state import (
 def sample_config() -> PipelineConfig:
     return PipelineConfig(
         research_prompt="Find SaaS opportunities",
-        model_name="claude-sonnet-4-6",
         num_ideas=4,
         top_k=2,
         score_threshold=0.55,
@@ -163,7 +162,7 @@ def sample_rebuttal(sample_idea: BusinessIdea) -> Rebuttal:
 @pytest.fixture
 def mock_llm_for_devils_advocate():
     """Patch init_chat_model to return a mock LLM chain."""
-    with patch("nexis.agents.base.init_chat_model") as mock_init:
+    with patch("nexis.agents.base.ChatOpenAI") as mock_init:
         mock_chain = MagicMock()
         mock_init.return_value.with_structured_output.return_value = mock_chain
         yield mock_chain
@@ -276,7 +275,6 @@ def test_report_generator_json_format(
     """JSON format report should produce valid JSON with top_ideas and scores."""
     config = PipelineConfig(
         research_prompt="test",
-        model_name="claude-sonnet-4-6",
         output_format="json",
     )
     state = _make_state(config, sample_idea)

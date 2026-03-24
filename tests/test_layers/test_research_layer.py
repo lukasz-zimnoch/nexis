@@ -84,7 +84,7 @@ async def test_research_layer_full_flow(sample_config):
         patch("nexis.agents.research.TrendScanner.invoke", new=AsyncMock(return_value=trend_output)),
         patch("nexis.agents.research.ResearchAgent.invoke", new=AsyncMock(return_value=research_output)),
         patch("nexis.agents.research.NicheValidator.invoke", new=AsyncMock(return_value=niche_output)),
-        patch("nexis.agents.base.init_chat_model"),
+        patch("nexis.agents.base.ChatOpenAI"),
     ):
         graph = build_research_subgraph()
         state = await graph.ainvoke(make_initial_state(sample_config))
@@ -114,7 +114,7 @@ async def test_research_layer_node_order(sample_config):
         patch("nexis.agents.research.TrendScanner.invoke", mock_trend_scanner_invoke),
         patch("nexis.agents.research.ResearchAgent.invoke", mock_research_agent_invoke),
         patch("nexis.agents.research.NicheValidator.invoke", mock_niche_validator_invoke),
-        patch("nexis.agents.base.init_chat_model"),
+        patch("nexis.agents.base.ChatOpenAI"),
     ):
         graph = build_research_subgraph()
         await graph.ainvoke(make_initial_state(sample_config))
@@ -134,7 +134,7 @@ async def test_research_layer_empty_ideas_from_research(sample_config):
         patch("nexis.agents.research.TrendScanner.invoke", new=AsyncMock(return_value=trend_output)),
         patch("nexis.agents.research.ResearchAgent.invoke", new=AsyncMock(return_value=research_output)),
         patch("nexis.agents.research.NicheValidator.invoke", new=AsyncMock(return_value=niche_output)),
-        patch("nexis.agents.base.init_chat_model"),
+        patch("nexis.agents.base.ChatOpenAI"),
     ):
         graph = build_research_subgraph()
         state = await graph.ainvoke(make_initial_state(sample_config))
@@ -154,7 +154,7 @@ async def test_research_layer_trend_signals_stored_in_buffer(sample_config):
         patch("nexis.agents.research.TrendScanner.invoke", new=AsyncMock(return_value=trend_output)),
         patch("nexis.agents.research.ResearchAgent.invoke", new=AsyncMock(return_value=research_output)),
         patch("nexis.agents.research.NicheValidator.invoke", new=AsyncMock(return_value=niche_output)),
-        patch("nexis.agents.base.init_chat_model"),
+        patch("nexis.agents.base.ChatOpenAI"),
     ):
         graph = build_research_subgraph()
         state = await graph.ainvoke(make_initial_state(sample_config))
@@ -175,7 +175,7 @@ async def test_research_layer_niche_validator_receives_raw_ideas(sample_config):
         patch("nexis.agents.research.TrendScanner.invoke", new=AsyncMock(return_value=trend_output)),
         patch("nexis.agents.research.ResearchAgent.invoke", new=AsyncMock(return_value=research_output)),
         patch("nexis.agents.research.NicheValidator.invoke", niche_invoke),
-        patch("nexis.agents.base.init_chat_model"),
+        patch("nexis.agents.base.ChatOpenAI"),
     ):
         graph = build_research_subgraph()
         await graph.ainvoke(make_initial_state(sample_config))

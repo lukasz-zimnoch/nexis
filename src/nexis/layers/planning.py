@@ -69,15 +69,15 @@ async def plan_idea_node(state: PlanningLayerState) -> dict:
 
     logger.info("Planning idea %s (%s)", idea_id, idea.title)
 
-    mvp_architect = MVPArchitect(model_name=config.model_name, max_retries=config.max_retries)
-    gtm_strategist = GTMStrategist(model_name=config.model_name, max_retries=config.max_retries)
+    mvp_architect = MVPArchitect(model_name=config.model_for("mvp_architect"), max_retries=config.max_retries)
+    gtm_strategist = GTMStrategist(model_name=config.model_for("gtm_strategist"), max_retries=config.max_retries)
 
     mvp, gtm = await asyncio.gather(
         mvp_architect.invoke_mvp(idea, idea_reviews),
         gtm_strategist.invoke_gtm(idea, idea_reviews),
     )
 
-    composer = BusinessPlanComposer(model_name=config.model_name, max_retries=config.max_retries)
+    composer = BusinessPlanComposer(model_name=config.model_for("business_plan_composer"), max_retries=config.max_retries)
     plan = await composer.invoke_plan(idea, mvp, gtm)
 
     logger.info("Finished planning idea %s", idea_id)

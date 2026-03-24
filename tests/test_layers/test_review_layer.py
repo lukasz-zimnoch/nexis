@@ -1,7 +1,7 @@
 """Tests for the Layer 2 review subgraph."""
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -19,7 +19,6 @@ from nexis.state import BusinessIdea, Review, ReviewerRole
 def config() -> PipelineConfig:
     return PipelineConfig(
         research_prompt="Find SaaS opportunities",
-        model_name="claude-sonnet-4-6",
         num_ideas=4,
         top_k=3,
         score_threshold=0.55,
@@ -86,10 +85,11 @@ async def test_review_layer_produces_18_reviews(config, three_ideas):
         "final_reports": [],
     }
 
-    with patch(
-        "nexis.agents.reviewers.ReviewerAgent.invoke_review",
-        new=mock_invoke_review,
-    ):
+    with patch("nexis.agents.base.build_llm", return_value=MagicMock()), \
+         patch(
+             "nexis.agents.reviewers.ReviewerAgent.invoke_review",
+             new=mock_invoke_review,
+         ):
         graph = build_review_subgraph()
         result = await graph.ainvoke(initial_state)
 
@@ -119,10 +119,11 @@ async def test_review_layer_scores_all_ideas(config, three_ideas):
         "final_reports": [],
     }
 
-    with patch(
-        "nexis.agents.reviewers.ReviewerAgent.invoke_review",
-        new=mock_invoke_review,
-    ):
+    with patch("nexis.agents.base.build_llm", return_value=MagicMock()), \
+         patch(
+             "nexis.agents.reviewers.ReviewerAgent.invoke_review",
+             new=mock_invoke_review,
+         ):
         graph = build_review_subgraph()
         result = await graph.ainvoke(initial_state)
 
@@ -154,10 +155,11 @@ async def test_review_layer_top_ideas_above_threshold(config, three_ideas):
         "final_reports": [],
     }
 
-    with patch(
-        "nexis.agents.reviewers.ReviewerAgent.invoke_review",
-        new=mock_invoke_review,
-    ):
+    with patch("nexis.agents.base.build_llm", return_value=MagicMock()), \
+         patch(
+             "nexis.agents.reviewers.ReviewerAgent.invoke_review",
+             new=mock_invoke_review,
+         ):
         graph = build_review_subgraph()
         result = await graph.ainvoke(initial_state)
 
@@ -211,10 +213,11 @@ async def test_review_layer_handles_failed_reviews(config, three_ideas):
         "final_reports": [],
     }
 
-    with patch(
-        "nexis.agents.reviewers.ReviewerAgent.invoke_review",
-        new=mock_invoke_review_with_failure,
-    ):
+    with patch("nexis.agents.base.build_llm", return_value=MagicMock()), \
+         patch(
+             "nexis.agents.reviewers.ReviewerAgent.invoke_review",
+             new=mock_invoke_review_with_failure,
+         ):
         graph = build_review_subgraph()
         result = await graph.ainvoke(initial_state)
 

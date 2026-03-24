@@ -26,7 +26,6 @@ from nexis.state import BusinessIdea, Review, ReviewerRole
 def config() -> PipelineConfig:
     return PipelineConfig(
         research_prompt="Test prompt",
-        model_name="claude-sonnet-4-6",
         num_ideas=4,
         top_k=3,
         score_threshold=0.55,
@@ -73,7 +72,7 @@ def idea_c() -> BusinessIdea:
 @pytest.fixture
 def mock_llm_chain():
     """Patch init_chat_model to return a controllable mock chain."""
-    with patch("nexis.agents.base.init_chat_model") as mock_init:
+    with patch("nexis.agents.base.ChatOpenAI") as mock_init:
         mock_chain = MagicMock()
         mock_init.return_value.with_structured_output.return_value = mock_chain
         yield mock_chain
@@ -239,7 +238,6 @@ def test_synthesizer_top_k_filtering(config, idea_a, idea_b, idea_c):
     # config has top_k=3, but we'll verify top_k=2 with a modified config
     cfg_top2 = PipelineConfig(
         research_prompt="test",
-        model_name="claude-sonnet-4-6",
         num_ideas=4,
         top_k=2,
         score_threshold=0.55,

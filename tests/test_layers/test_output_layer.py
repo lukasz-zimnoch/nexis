@@ -39,7 +39,6 @@ from datetime import datetime, timezone
 def sample_config() -> PipelineConfig:
     return PipelineConfig(
         research_prompt="Find SaaS opportunities in developer tools",
-        model_name="claude-sonnet-4-6",
         num_ideas=4,
         top_k=2,
         score_threshold=0.55,

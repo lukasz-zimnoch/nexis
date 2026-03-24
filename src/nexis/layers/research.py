@@ -71,7 +71,7 @@ async def trend_scanner_node(state: ResearchLayerState) -> dict:
         keywords = [research_prompt[:50]]
 
     agent = TrendScanner(
-        model_name=config.model_name,
+        model_name=config.model_for("trend_scanner"),
         max_retries=config.max_retries,
     )
 
@@ -93,7 +93,7 @@ async def research_agent_node(state: ResearchLayerState) -> dict:
     trend_signals: list[TrendSignal] = state.get("trend_signals_buffer", [])
 
     agent = ResearchAgent(
-        model_name=config.model_name,
+        model_name=config.model_for("research_agent"),
         max_retries=config.max_retries,
     )
 
@@ -123,7 +123,7 @@ async def niche_validator_node(state: ResearchLayerState) -> dict:
         return {}
 
     agent = NicheValidator(
-        model_name=config.model_name,
+        model_name=config.model_for("niche_validator"),
         max_retries=config.max_retries,
     )
 
