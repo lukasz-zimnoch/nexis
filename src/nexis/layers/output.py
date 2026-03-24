@@ -28,7 +28,7 @@ async def devils_advocate_node(state: PipelineState) -> dict:
         logger.info("devils_advocate_node: no top ideas — skipping validation")
         return {"rebuttals": {}}
 
-    advocate = DevilsAdvocate(model_name=config.model_name, max_retries=config.max_retries)
+    advocate = DevilsAdvocate(model_name=config.model_for("devils_advocate"), max_retries=config.max_retries)
 
     plans = [business_plans[idea_id] for idea_id in top_idea_ids if idea_id in business_plans]
 

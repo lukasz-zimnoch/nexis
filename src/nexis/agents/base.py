@@ -3,11 +3,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 from typing import Any, TypeVar
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ValidationError
 
 from nexis.telemetry import log_llm_call
@@ -15,6 +17,25 @@ from nexis.telemetry import log_llm_call
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
+
+
+def build_llm(model_name: str):
+    """Route LLM construction through OpenRouter if OPENROUTER_API_KEY is set."""
+    api_key = os.environ.get("OPENROUTER_API_KEY")
+    if api_key:
+        return ChatOpenAI(
+            model=model_name,
+            api_key=api_key,
+            base_url="https://openrouter.ai/api/v1",
+            default_headers={
+                "HTTP-Referer": "https://github.com/lukasz-zimnoch/nexis",
+                "X-Title": "Nexis",
+            },
+        )
+    if "/" in model_name:
+        provider, model = model_name.split("/", 1)
+        return init_chat_model(model, model_provider=provider)
+    return init_chat_model(model_name)
 
 
 class BaseAgent:
@@ -33,7 +54,7 @@ class BaseAgent:
         self.system_prompt = system_prompt
         self.max_retries = max_retries
 
-        llm = init_chat_model(model_name)
+        llm = build_llm(model_name)
         if tools:
             llm = llm.bind_tools(tools)
         self._llm = llm.with_structured_output(output_schema, include_raw=True)

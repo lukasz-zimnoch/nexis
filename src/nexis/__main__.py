@@ -32,9 +32,10 @@ def main() -> None:
     )
     parser.add_argument(
         "--model",
-        required=True,
+        required=False,
+        default=None,
         dest="model_name",
-        help="LLM model name (e.g., claude-sonnet-4-6, gpt-4o)",
+        help="Override ALL agent models for quick testing. Omit to use per-agent defaults from nexis/models.py.",
     )
     parser.add_argument(
         "--num-ideas",
@@ -71,15 +72,20 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    config = PipelineConfig(
+    config_kwargs: dict = dict(
         research_prompt=args.prompt,
-        model_name=args.model_name,
         num_ideas=args.num_ideas,
         top_k=args.top_k,
         score_threshold=args.score_threshold,
         output_format=args.output_format,
         checkpoint_db_path=args.checkpoint_db_path,
     )
+
+    if args.model_name is not None:
+        from nexis import models as _models
+        config_kwargs["agent_models"] = {k: args.model_name for k in _models.AGENT_MODEL_KEYS}
+
+    config = PipelineConfig(**config_kwargs)
 
     reports = run_pipeline(config)
 
