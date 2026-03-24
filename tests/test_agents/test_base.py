@@ -42,7 +42,7 @@ def _wrap(parsed, raw=None):
 @pytest.fixture
 def mock_llm():
     """Patch init_chat_model to return a mock LLM."""
-    with patch("nexis.agents.base.init_chat_model") as mock_init:
+    with patch("nexis.agents.base.ChatOpenAI") as mock_init:
         mock_chain = MagicMock()
         mock_init.return_value.with_structured_output.return_value = mock_chain
         yield mock_chain
@@ -123,7 +123,7 @@ def test_minimal_value_types():
 
 
 def test_format_input_with_pydantic_model():
-    with patch("nexis.agents.base.init_chat_model"):
+    with patch("nexis.agents.base.ChatOpenAI"):
         agent = BaseAgent(
             model_name="test",
             output_schema=SimpleOutput,
@@ -138,21 +138,14 @@ def test_format_input_with_pydantic_model():
     assert "model:" in result
 
 
-def test_build_llm_routes_to_openrouter_when_key_set(monkeypatch):
+def test_build_llm_uses_openrouter(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
     with patch("nexis.agents.base.ChatOpenAI") as mock:
         import nexis.agents.base as base
         base.build_llm("anthropic/claude-opus-4-6")
     mock.assert_called_once()
     assert mock.call_args.kwargs["base_url"] == "https://openrouter.ai/api/v1"
-
-
-def test_build_llm_falls_back_to_init_chat_model(monkeypatch):
-    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
-    with patch("nexis.agents.base.init_chat_model") as mock:
-        import nexis.agents.base as base
-        base.build_llm("anthropic/claude-sonnet-4-6")
-    mock.assert_called_once_with("claude-sonnet-4-6", model_provider="anthropic")
+    assert mock.call_args.kwargs["api_key"] == "sk-or-test"
 
 
 @pytest.mark.asyncio

@@ -63,7 +63,7 @@ class TestResearchAgent:
         ]
         expected_output = ResearchOutput(ideas=expected_ideas)
 
-        with patch("nexis.agents.base.init_chat_model") as mock_init:
+        with patch("nexis.agents.base.ChatOpenAI") as mock_init:
             mock_llm = MagicMock()
             mock_llm.bind_tools.return_value = mock_llm
             mock_llm.with_structured_output.return_value = mock_llm
@@ -100,7 +100,7 @@ class TestResearchAgent:
         """ResearchAgent should call SearchTool.search before invoking LLM."""
         expected_output = ResearchOutput(ideas=[make_business_idea()])
 
-        with patch("nexis.agents.base.init_chat_model") as mock_init:
+        with patch("nexis.agents.base.ChatOpenAI") as mock_init:
             mock_llm = MagicMock()
             mock_llm.bind_tools.return_value = mock_llm
             mock_llm.with_structured_output.return_value = mock_llm
@@ -143,7 +143,7 @@ class TestTrendScanner:
         ]
         expected_output = TrendScannerOutput(signals=expected_signals)
 
-        with patch("nexis.agents.base.init_chat_model") as mock_init:
+        with patch("nexis.agents.base.ChatOpenAI") as mock_init:
             mock_llm = MagicMock()
             mock_llm.bind_tools.return_value = mock_llm
             mock_llm.with_structured_output.return_value = mock_llm
@@ -170,7 +170,7 @@ class TestTrendScanner:
         """TrendScanner should pass keywords to TrendScraperTool.scrape."""
         expected_output = TrendScannerOutput(signals=[make_trend_signal()])
 
-        with patch("nexis.agents.base.init_chat_model") as mock_init:
+        with patch("nexis.agents.base.ChatOpenAI") as mock_init:
             mock_llm = MagicMock()
             mock_llm.bind_tools.return_value = mock_llm
             mock_llm.with_structured_output.return_value = mock_llm
@@ -211,7 +211,7 @@ class TestNicheValidator:
         filtered_ideas = [make_business_idea("Niche DevTool")]
         expected_output = NicheValidatorOutput(ideas=filtered_ideas)
 
-        with patch("nexis.agents.base.init_chat_model") as mock_init:
+        with patch("nexis.agents.base.ChatOpenAI") as mock_init:
             mock_llm = MagicMock()
             mock_llm.bind_tools.return_value = mock_llm
             mock_llm.with_structured_output.return_value = mock_llm
@@ -239,7 +239,7 @@ class TestNicheValidator:
         ]
         expected_output = NicheValidatorOutput(ideas=[])
 
-        with patch("nexis.agents.base.init_chat_model") as mock_init:
+        with patch("nexis.agents.base.ChatOpenAI") as mock_init:
             mock_llm = MagicMock()
             mock_llm.bind_tools.return_value = mock_llm
             mock_llm.with_structured_output.return_value = mock_llm

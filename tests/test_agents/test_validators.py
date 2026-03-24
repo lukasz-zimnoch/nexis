@@ -162,7 +162,7 @@ def sample_rebuttal(sample_idea: BusinessIdea) -> Rebuttal:
 @pytest.fixture
 def mock_llm_for_devils_advocate():
     """Patch init_chat_model to return a mock LLM chain."""
-    with patch("nexis.agents.base.init_chat_model") as mock_init:
+    with patch("nexis.agents.base.ChatOpenAI") as mock_init:
         mock_chain = MagicMock()
         mock_init.return_value.with_structured_output.return_value = mock_chain
         yield mock_chain

@@ -23,8 +23,8 @@ from nexis.state import (
 
 
 @pytest.fixture(autouse=True)
-def clear_openrouter_key(monkeypatch):
-    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+def set_openrouter_key(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
 
 
 @pytest.fixture
