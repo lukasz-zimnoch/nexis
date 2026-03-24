@@ -23,7 +23,7 @@ If all ideas in Layer 2 score below the threshold, the graph routes back to Laye
 ```bash
 uv sync
 cp .env.example .env
-# Fill in TAVILY_API_KEY and either ANTHROPIC_API_KEY or OPENROUTER_API_KEY
+# Fill in OPENROUTER_API_KEY and TAVILY_API_KEY
 ```
 
 **Run tests:**
@@ -68,7 +68,7 @@ uv run nexis --prompt "..." --model anthropic/claude-haiku-4-5
 | `top_k` | `3` | Max ideas passed from Layer 2 to Layer 3 |
 | `score_threshold` | `0.55` | Minimum aggregate score to pass Layer 2 filter |
 | `max_retries` | `2` | Max retry loops if no ideas pass the threshold |
-| `agent_models` | *(per-agent defaults from `nexis/models.py`)* | Dict mapping agent keys to model IDs; override individual agents or use `--model` CLI flag to override all |
+| `agent_models` | *(per-agent defaults from `nexis/models.py`)* | Dict mapping agent keys to OpenRouter model IDs; use `--model` CLI flag to override all agents at once |
 | `output_format` | `markdown` | Final report format: `markdown` \| `json` |
 
 ## Project structure
@@ -110,7 +110,7 @@ nexis/
 ## Tech stack
 
 - **Orchestration:** LangGraph 1.1+ (StateGraph, Send, subgraphs, checkpointing)
-- **LLM:** per-agent model assignments in `nexis/models.py`; optional OpenRouter routing via `OPENROUTER_API_KEY`
+- **LLM:** per-agent model assignments in `nexis/models.py`; all calls routed through OpenRouter (`OPENROUTER_API_KEY` required)
 - **Structured output:** LangChain `with_structured_output()` + Pydantic v2
 - **Web search:** Tavily (primary), Serper (fallback)
 - **Checkpointing:** SqliteSaver via `langgraph-checkpoint-sqlite`

@@ -316,7 +316,7 @@ All pipeline behavior is controlled via a `PipelineConfig` Pydantic model passed
 | `score_threshold` | `float` | `0.55` | Minimum aggregate score to pass Layer 2 filter |
 | `max_retries` | `int` | `2` | Maximum retry loops if no ideas pass the threshold |
 | `reviewer_weights` | `dict` | See §6.1 | Custom weights for the scoring formula |
-| `agent_models` | `dict[str, str]` | Per-agent defaults from `nexis/models.py` | Maps agent keys (e.g. `"research_agent"`, `"reviewer_market"`) to OpenRouter-format model IDs. Set `OPENROUTER_API_KEY` to route all calls through OpenRouter; otherwise falls back to direct provider clients. |
+| `agent_models` | `dict[str, str]` | Per-agent defaults from `nexis/models.py` | Maps agent keys (e.g. `"research_agent"`, `"reviewer_market"`) to OpenRouter model IDs. All LLM calls are routed through OpenRouter — `OPENROUTER_API_KEY` must be set. |
 | `output_format` | `str` | `markdown` | Final report format: `markdown` \| `json` |
 
 ---
@@ -357,7 +357,7 @@ Approximate per-run cost assuming 8 candidate ideas with 3 surviving to Layer 3 
 | Component | Technology |
 |---|---|
 | Orchestration | LangGraph 1.1+ (StateGraph, Send, subgraphs, checkpointing) |
-| LLM Provider | Per-agent model IDs in `nexis/models.py`; routed via OpenRouter (`OPENROUTER_API_KEY`) or direct provider fallback |
+| LLM Provider | OpenRouter — all LLM calls route through `openrouter.ai/api/v1` (`OPENROUTER_API_KEY` required); per-agent model IDs defined in `nexis/models.py` |
 | Structured Output | LangChain `with_structured_output()` + Pydantic v2 models |
 | Web Search | Tavily Search API (primary), Serper API (fallback) |
 | Checkpointing | SqliteSaver via `langgraph-checkpoint-sqlite` |
@@ -387,7 +387,7 @@ nexis/
 │   │   ├── planning.py        # Layer 3 subgraph + planning agents
 │   │   └── output.py          # Layer 4 subgraph + report generator
 │   ├── agents/
-│   │   ├── base.py            # BaseAgent with retry, structured output, OpenRouter routing
+│   │   ├── base.py            # BaseAgent with retry, structured output; build_llm() routes via OpenRouter
 │   │   ├── research.py        # ResearchAgent, TrendScanner, NicheValidator
 │   │   ├── reviewers.py       # All 5 critic agents
 │   │   ├── planners.py        # MVPArchitect, GTMStrategist, Composer
