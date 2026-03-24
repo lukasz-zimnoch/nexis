@@ -183,24 +183,26 @@ def test_synthesizer_correct_weighted_calculation(config, idea_a):
     """Weighted score = sum(weight_i * score_i * confidence_i) / 10."""
     # market: weight=0.25, score=8, confidence=1.0  → 0.25 * 8 * 1.0 = 2.0
     # technical: weight=0.20, score=6, confidence=1.0 → 0.20 * 6 * 1.0 = 1.2
-    # moat: weight=0.20, score=7, confidence=1.0 → 0.20 * 7 * 1.0 = 1.4
+    # moat: weight=0.15, score=7, confidence=1.0 → 0.15 * 7 * 1.0 = 1.05
     # financial: weight=0.20, score=5, confidence=1.0 → 0.20 * 5 * 1.0 = 1.0
-    # risk: weight=0.15, score=4, confidence=1.0 → 0.15 * 4 * 1.0 = 0.6
-    # total = (2.0 + 1.2 + 1.4 + 1.0 + 0.6) / 10 = 6.2 / 10 = 0.62
+    # risk: weight=0.10, score=4, confidence=1.0 → 0.10 * 4 * 1.0 = 0.4
+    # ai_resilience: weight=0.10, score=6, confidence=1.0 → 0.10 * 6 * 1.0 = 0.6
+    # total = (2.0 + 1.2 + 1.05 + 1.0 + 0.4 + 0.6) / 10 = 6.25 / 10 = 0.625
     reviews = [
         make_review(idea_a.id, ReviewerRole.market, score=8, confidence=1.0),
         make_review(idea_a.id, ReviewerRole.technical, score=6, confidence=1.0),
         make_review(idea_a.id, ReviewerRole.moat, score=7, confidence=1.0),
         make_review(idea_a.id, ReviewerRole.financial, score=5, confidence=1.0),
         make_review(idea_a.id, ReviewerRole.risk, score=4, confidence=1.0),
+        make_review(idea_a.id, ReviewerRole.ai_resilience, score=6, confidence=1.0),
     ]
 
     synthesizer = ReviewSynthesizer()
     scores, top_ideas = synthesizer.synthesize(reviews, config, [idea_a])
 
-    expected_score = (0.25 * 8 + 0.20 * 6 + 0.20 * 7 + 0.20 * 5 + 0.15 * 4) / 10
+    expected_score = (0.25 * 8 + 0.20 * 6 + 0.15 * 7 + 0.20 * 5 + 0.10 * 4 + 0.10 * 6) / 10
     assert abs(scores[idea_a.id] - expected_score) < 1e-9
-    assert idea_a.id in top_ideas  # 0.62 >= 0.55 threshold
+    assert idea_a.id in top_ideas  # 0.625 >= 0.55 threshold
 
 
 def test_synthesizer_missing_reviews_for_some_ideas(config, idea_a, idea_b):
@@ -265,6 +267,7 @@ def test_synthesizer_confidence_zero_yields_score_zero(config, idea_a):
         make_review(idea_a.id, ReviewerRole.moat, score=10, confidence=0.0),
         make_review(idea_a.id, ReviewerRole.financial, score=10, confidence=0.0),
         make_review(idea_a.id, ReviewerRole.risk, score=10, confidence=0.0),
+        make_review(idea_a.id, ReviewerRole.ai_resilience, score=10, confidence=0.0),
     ]
 
     synthesizer = ReviewSynthesizer()

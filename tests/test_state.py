@@ -139,6 +139,7 @@ def test_review_score_bounds():
 
 def test_enum_values():
     assert ReviewerRole.market.value == "market"
+    assert ReviewerRole.ai_resilience.value == "ai_resilience"
     assert ComplexityRating.high.value == "high"
     assert Severity.critical.value == "critical"
     assert MoSCoWPriority.must.value == "must"
