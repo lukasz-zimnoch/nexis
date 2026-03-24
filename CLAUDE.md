@@ -21,7 +21,7 @@ Nexis is an autonomous multi-agent business idea pipeline built on LangGraph. It
 Four sequential LangGraph subgraphs composed into a parent graph:
 
 1. `layers/research.py` — Layer 1: idea generation with web research
-2. `layers/review.py` — Layer 2: parallel critic panel via `Send()` API (N ideas × 5 critics)
+2. `layers/review.py` — Layer 2: parallel critic panel via `Send()` API (N ideas × 6 critics)
 3. `layers/planning.py` — Layer 3: MVP + GTM planning via `asyncio.gather()` inside per-idea nodes
 4. `layers/output.py` — Layer 4: adversarial validation and report generation
 

@@ -52,8 +52,9 @@ def test_custom_weights_accepted():
         "market": 0.30,
         "technical": 0.20,
         "financial": 0.20,
-        "moat": 0.20,
-        "risk": 0.10,
+        "moat": 0.15,
+        "risk": 0.05,
+        "ai_resilience": 0.10,
     }
     config = PipelineConfig(
         research_prompt="test",

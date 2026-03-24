@@ -23,6 +23,7 @@ class ReviewerRole(str, Enum):
     moat = "moat"
     financial = "financial"
     risk = "risk"
+    ai_resilience = "ai_resilience"
 
 
 class ComplexityRating(str, Enum):

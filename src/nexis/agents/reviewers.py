@@ -1,4 +1,4 @@
-"""Review layer agents: five critic ReviewerAgents and a ReviewSynthesizer."""
+"""Review layer agents: six critic ReviewerAgents and a ReviewSynthesizer."""
 from __future__ import annotations
 
 import logging
@@ -36,6 +36,15 @@ REVIEWER_PROMPTS: dict[ReviewerRole, str] = {
     ReviewerRole.risk: (
         "You are a Risk Assessor. Red-team this business idea: regulatory risk, single points of "
         "failure, ethical concerns, market timing risk. Score 1-10."
+    ),
+    ReviewerRole.ai_resilience: (
+        "You are an AI Disruption Analyst. Evaluate this business idea's resilience to AI "
+        "replacement and commoditization. Consider: Can a foundation-model provider (OpenAI, "
+        "Anthropic, Google) replicate the core value proposition as a built-in feature or API "
+        "endpoint? Does the idea's value come from proprietary data, unique workflows, or "
+        "domain-specific integration rather than raw AI capability? How fast is the AI capability "
+        "frontier moving in this problem domain? Is the idea building on top of AI (leveraged) "
+        "or competing against AI (exposed)? Score 1-10 where 10 means highly AI-resilient."
     ),
 }
 

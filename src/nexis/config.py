@@ -17,8 +17,9 @@ class PipelineConfig(BaseSettings):
         "market": 0.25,
         "technical": 0.20,
         "financial": 0.20,
-        "moat": 0.20,
-        "risk": 0.15,
+        "moat": 0.15,
+        "risk": 0.10,
+        "ai_resilience": 0.10,
     }
     model_name: str
     output_format: Literal["markdown", "json"] = "markdown"

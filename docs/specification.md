@@ -84,7 +84,7 @@ This layer is responsible for scanning external sources, identifying market oppo
 
 ### 3.3 Layer 2 — Parallel Review Panel
 
-Each idea from Layer 1 is evaluated concurrently by five specialist critic agents using LangGraph's `Send()` API. This creates a dynamic fan-out of (N ideas × 5 critics) parallel executions, followed by a fan-in at the Review Synthesizer node.
+Each idea from Layer 1 is evaluated concurrently by six specialist critic agents using LangGraph's `Send()` API. This creates a dynamic fan-out of (N ideas × 6 critics) parallel executions, followed by a fan-in at the Review Synthesizer node.
 
 | Agent | Responsibility | Inputs / Outputs | Tools / Model |
 |---|---|---|---|
@@ -93,6 +93,7 @@ Each idea from Layer 1 is evaluated concurrently by five specialist critic agent
 | **Competitive Moat** | Analyzes defensibility: network effects, data moats, switching costs, regulatory barriers. Flags commodity risk. | In: `BusinessIdea` · Out: `Review` (score 1–10, rationale) | Crunchbase, patent search, LLM |
 | **Financial Viability** | Unit economics sanity check: estimated CAC, LTV, margin structure, path to ramen profitability. | In: `BusinessIdea` · Out: `Review` (score 1–10, rationale) | Pricing benchmarks, LLM |
 | **Risk Assessor** | Red-teams the idea: regulatory risk, single points of failure, ethical concerns, market timing risk. | In: `BusinessIdea` · Out: `Review` (score 1–10, rationale) | Regulatory databases, LLM |
+| **AI Disruption Analyst** | Evaluates resilience to AI replacement and commoditization: whether a foundation-model provider can replicate the core value, whether the idea builds on top of AI or competes against it, and how fast the AI frontier is moving in the domain. | In: `BusinessIdea` · Out: `Review` (score 1–10, rationale) | LLM |
 | **Review Synthesizer** | Fan-in node. Aggregates all reviewer scores using a weighted formula. Ranks ideas, drops those below threshold, passes top K to Layer 3. | In: `list[Review]` · Out: `top_ideas[]`, `scores[]` | Scoring algorithm (no LLM) |
 
 ### 3.4 Layer 3 — MVP Scope & GTM Strategy
@@ -283,8 +284,9 @@ The Review Synthesizer computes a weighted aggregate score for each idea. Defaul
 | **Market Analyst** | 0.25 | Market size and timing are the strongest predictors of startup success. |
 | **Technical Feasibility** | 0.20 | Critical for a solo/small team constraint. Infeasible ideas waste all downstream compute. |
 | **Financial Viability** | 0.20 | Unit economics must be plausible even at the idea stage. |
-| **Competitive Moat** | 0.20 | Defensibility determines long-term value, even if less critical at MVP stage. |
-| **Risk Assessor** | 0.15 | Risk is a modifier, not a primary driver. High-risk ideas can still be viable with mitigation. |
+| **Competitive Moat** | 0.15 | Defensibility determines long-term value; reduced from 0.20 since AI-specific commodity risk is now covered separately. |
+| **Risk Assessor** | 0.10 | Risk is a modifier, not a primary driver. Reduced from 0.15 since AI disruption risk is now covered separately. |
+| **AI Disruption Analyst** | 0.10 | Meaningful but not dominant; ensures ideas exposed to AI commoditization are systematically penalized. |
 
 ### 6.2 Score Formula
 

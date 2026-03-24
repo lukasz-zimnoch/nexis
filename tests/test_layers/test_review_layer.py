@@ -59,8 +59,8 @@ def _make_review(idea_id: str, role: ReviewerRole) -> Review:
 
 
 @pytest.mark.asyncio
-async def test_review_layer_produces_15_reviews(config, three_ideas):
-    """3 ideas × 5 roles = 15 reviews in state after layer runs."""
+async def test_review_layer_produces_18_reviews(config, three_ideas):
+    """3 ideas × 6 roles = 18 reviews in state after layer runs."""
     # Pre-build the expected reviews
     expected_reviews_map: dict[tuple[str, ReviewerRole], Review] = {
         (idea.id, role): _make_review(idea.id, role)
@@ -94,7 +94,7 @@ async def test_review_layer_produces_15_reviews(config, three_ideas):
         result = await graph.ainvoke(initial_state)
 
     reviews = result["reviews"]
-    assert len(reviews) == 15, f"Expected 15 reviews, got {len(reviews)}"
+    assert len(reviews) == 18, f"Expected 18 reviews, got {len(reviews)}"
 
 
 @pytest.mark.asyncio
@@ -218,8 +218,8 @@ async def test_review_layer_handles_failed_reviews(config, three_ideas):
         graph = build_review_subgraph()
         result = await graph.ainvoke(initial_state)
 
-    # All 15 reviews still produced (including failed ones)
-    assert len(result["reviews"]) == 15
+    # All 18 reviews still produced (including failed ones)
+    assert len(result["reviews"]) == 18
     # Scores still present for all ideas
     for idea in three_ideas:
         assert idea.id in result["scores"]
