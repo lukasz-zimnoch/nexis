@@ -2,10 +2,7 @@
 Per-agent model assignments. This is the single place to change which model
 powers each agent. Uses OpenRouter model IDs (provider/model-name).
 
-When OPENROUTER_API_KEY is set, these are sent verbatim to OpenRouter.
-When falling back to direct providers, the provider/ prefix is resolved
-by init_chat_model() automatically (anthropic/, openai/, google/).
-
+All LLM calls are routed through OpenRouter — set OPENROUTER_API_KEY in .env.
 See https://openrouter.ai/models for available IDs.
 """
 
