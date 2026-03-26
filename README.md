@@ -6,7 +6,7 @@ Autonomous multi-agent pipeline that generates, evaluates, and plans business id
 
 The pipeline executes as a directed acyclic graph across four sequential layers:
 
-1. **Deep Research** — A Research Agent scans the web, identifies trends, and generates N candidate business ideas with structured metadata. A Trend Scanner monitors HN, ProductHunt, Reddit, and X for real-time signals. A Niche Validator pre-filters duplicates and obvious incumbents.
+1. **Deep Research** — A Research Agent scans the web, identifies trends, and generates N candidate business ideas with structured metadata. A Trend Scanner monitors HN, ProductHunt, and Reddit for real-time signals. A Niche Validator pre-filters duplicates and obvious incumbents.
 
 2. **Parallel Review Panel** — Each idea is evaluated concurrently by six specialist critics (Market Analyst, Technical Feasibility, Competitive Moat, Financial Viability, Risk Assessor, AI Disruption Analyst) using LangGraph's `Send()` API. A Review Synthesizer aggregates weighted scores and filters the top K ideas above a configurable threshold.
 
@@ -112,7 +112,7 @@ nexis/
 - **Orchestration:** LangGraph 1.1+ (StateGraph, Send, subgraphs, checkpointing)
 - **LLM:** per-agent model assignments in `nexis/models.py`; all calls routed through OpenRouter (`OPENROUTER_API_KEY` required)
 - **Structured output:** LangChain `with_structured_output()` + Pydantic v2
-- **Web search:** Tavily (primary), Serper (fallback)
+- **Web search:** Tavily
 - **Checkpointing:** SqliteSaver via `langgraph-checkpoint-sqlite`
 - **Tracing:** Structured logging (nexis.telemetry); LangSmith (opt-in via env vars)
 - **Reports:** Jinja2 templates (markdown + JSON)
