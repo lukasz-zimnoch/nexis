@@ -371,8 +371,8 @@ Every node emits structured JSON events via the `nexis.telemetry` logger. Each e
 ### 8.2 Error Handling Strategy
 
 - **LLM validation failure:** Retry with error context appended to prompt (max 2 retries). On persistent failure, write partial result with `failure_reason` field populated.
-- **Tool failure (search, API):** Retry with exponential backoff (1s, 4s, 16s). On persistent failure, agent proceeds with available data and logs a warning.
-- **Timeout:** Per-node timeout of 120 seconds. On timeout, the node is marked as failed and the pipeline continues with partial state.
+- **Tool failure (search, API):** Immediate first attempt, then exponential backoff (1s, 4s, 16s). On persistent failure, agent proceeds with available data and logs a warning.
+- **Timeout:** Per-LLM-call timeout of 120 seconds (enforced in `BaseAgent` via `asyncio.wait_for`). On timeout, the node is marked as failed and the pipeline continues with partial state.
 - **Full pipeline failure:** Checkpointed state allows manual resume from the last successful node. Failed runs are logged with full state snapshot for debugging.
 
 ---
