@@ -1,4 +1,5 @@
 """Layer 2: Review Panel — Send() fan-out across N ideas × 5 critics."""
+
 from __future__ import annotations
 
 import logging
@@ -141,7 +142,9 @@ def build_review_subgraph():
     builder = StateGraph(ReviewLayerState)
 
     builder.add_node("review_node", instrument_node(review_node, layer_id="review"))
-    builder.add_node("synthesize_node", instrument_node(synthesize_node, layer_id="review"))
+    builder.add_node(
+        "synthesize_node", instrument_node(synthesize_node, layer_id="review")
+    )
 
     builder.add_conditional_edges(START, route_to_reviewers, ["review_node"])
     builder.add_edge("review_node", "synthesize_node")

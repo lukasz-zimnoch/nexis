@@ -49,9 +49,7 @@ class PipelineConfig(BaseSettings):
     def validate_weights_sum(self) -> "PipelineConfig":
         total = sum(self.reviewer_weights.values())
         if not math.isclose(total, 1.0, abs_tol=1e-6):
-            raise ValueError(
-                f"reviewer_weights must sum to 1.0, got {total:.6f}"
-            )
+            raise ValueError(f"reviewer_weights must sum to 1.0, got {total:.6f}")
         return self
 
     def model_for(self, agent_key: str) -> str:

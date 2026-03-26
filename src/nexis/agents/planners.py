@@ -1,4 +1,5 @@
 """Planning layer agents: MVPArchitect, GTMStrategist, BusinessPlanComposer."""
+
 from __future__ import annotations
 
 import logging

@@ -1,16 +1,10 @@
 """Tests for MVPArchitect, GTMStrategist, and BusinessPlanComposer agents."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-
-def _wrap(parsed):
-    """Wrap a parsed result in the include_raw=True dict format."""
-    raw = MagicMock()
-    raw.usage_metadata = {"input_tokens": 10, "output_tokens": 20, "total_tokens": 30}
-    return {"parsed": parsed, "raw": raw, "parsing_error": None}
 
 from nexis.agents.planners import BusinessPlanComposer, GTMStrategist, MVPArchitect
 from nexis.state import (
@@ -26,6 +20,13 @@ from nexis.state import (
     Sprint,
     TechStack,
 )
+
+
+def _wrap(parsed):
+    """Wrap a parsed result in the include_raw=True dict format."""
+    raw = MagicMock()
+    raw.usage_metadata = {"input_tokens": 10, "output_tokens": 20, "total_tokens": 30}
+    return {"parsed": parsed, "raw": raw, "parsing_error": None}
 
 
 # ---------------------------------------------------------------------------
@@ -84,7 +85,9 @@ async def test_mvp_architect_handles_llm_failure(
     mock_llm_chain, sample_business_idea, sample_mvp_plan
 ):
     """When the LLM returns a plan with failure_reason set, invoke_mvp surfaces it."""
-    failed_plan = sample_mvp_plan.model_copy(update={"failure_reason": "LLM unavailable"})
+    failed_plan = sample_mvp_plan.model_copy(
+        update={"failure_reason": "LLM unavailable"}
+    )
     mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(failed_plan))
 
     architect = MVPArchitect(model_name="claude-sonnet-4-6", max_retries=0)
@@ -107,7 +110,11 @@ async def test_gtm_strategist_returns_gtm_plan(
         idea_id=sample_business_idea.id,
         icp="10-50 person engineering teams",
         positioning="AI-powered code review for fast-moving teams",
-        channels=[Channel(name="HackerNews", rationale="Tech audience", estimated_cost_usd=0.0)],
+        channels=[
+            Channel(
+                name="HackerNews", rationale="Tech audience", estimated_cost_usd=0.0
+            )
+        ],
         pricing_model=PricingModel(
             strategy="per-seat",
             tiers=[{"name": "starter", "price": 29}],
@@ -169,7 +176,9 @@ async def test_composer_returns_business_plan(
     mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(expected))
 
     composer = BusinessPlanComposer(model_name="claude-sonnet-4-6", max_retries=0)
-    result = await composer.invoke_plan(sample_business_idea, sample_mvp_plan, sample_gtm_plan)
+    result = await composer.invoke_plan(
+        sample_business_idea, sample_mvp_plan, sample_gtm_plan
+    )
 
     assert isinstance(result, BusinessPlan)
     assert result.idea_id == sample_business_idea.id
@@ -196,7 +205,9 @@ async def test_composer_with_partial_mvp_input_does_not_crash(
 
     composer = BusinessPlanComposer(model_name="claude-sonnet-4-6", max_retries=0)
     # Must not raise
-    result = await composer.invoke_plan(sample_business_idea, failed_mvp, sample_gtm_plan)
+    result = await composer.invoke_plan(
+        sample_business_idea, failed_mvp, sample_gtm_plan
+    )
 
     assert isinstance(result, BusinessPlan)
     # The mvp_plan embedded in the result reflects the partial data
@@ -208,7 +219,9 @@ async def test_composer_with_partial_gtm_input_does_not_crash(
     mock_llm_chain, sample_business_idea, sample_mvp_plan, sample_gtm_plan
 ):
     """Composer should proceed (and log a warning) when gtm_plan has a failure_reason."""
-    failed_gtm = sample_gtm_plan.model_copy(update={"failure_reason": "Rate limit exceeded"})
+    failed_gtm = sample_gtm_plan.model_copy(
+        update={"failure_reason": "Rate limit exceeded"}
+    )
 
     expected = BusinessPlan(
         idea_id=sample_business_idea.id,
@@ -221,7 +234,9 @@ async def test_composer_with_partial_gtm_input_does_not_crash(
     mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(expected))
 
     composer = BusinessPlanComposer(model_name="claude-sonnet-4-6", max_retries=0)
-    result = await composer.invoke_plan(sample_business_idea, sample_mvp_plan, failed_gtm)
+    result = await composer.invoke_plan(
+        sample_business_idea, sample_mvp_plan, failed_gtm
+    )
 
     assert isinstance(result, BusinessPlan)
     assert result.gtm_plan.failure_reason == "Rate limit exceeded"

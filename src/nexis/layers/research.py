@@ -1,4 +1,5 @@
 """Layer 1: Research subgraph — trend scanning, idea generation, niche validation."""
+
 from __future__ import annotations
 
 import logging
@@ -131,7 +132,9 @@ async def niche_validator_node(state: ResearchLayerState) -> dict:
         output = await agent.invoke(ideas=raw_ideas)
         validated = output.ideas
         logger.info(
-            "NicheValidator filtered %d ideas down to %d", len(raw_ideas), len(validated)
+            "NicheValidator filtered %d ideas down to %d",
+            len(raw_ideas),
+            len(validated),
         )
     except Exception as exc:
         logger.warning("NicheValidator failed: %s — keeping original ideas", exc)
@@ -151,9 +154,16 @@ def build_research_subgraph():
     """Build and compile the Layer 1 research subgraph."""
     graph = StateGraph(ResearchLayerState)
 
-    graph.add_node("trend_scanner_node", instrument_node(trend_scanner_node, layer_id="research"))
-    graph.add_node("research_agent_node", instrument_node(research_agent_node, layer_id="research"))
-    graph.add_node("niche_validator_node", instrument_node(niche_validator_node, layer_id="research"))
+    graph.add_node(
+        "trend_scanner_node", instrument_node(trend_scanner_node, layer_id="research")
+    )
+    graph.add_node(
+        "research_agent_node", instrument_node(research_agent_node, layer_id="research")
+    )
+    graph.add_node(
+        "niche_validator_node",
+        instrument_node(niche_validator_node, layer_id="research"),
+    )
 
     graph.add_edge(START, "trend_scanner_node")
     graph.add_edge("trend_scanner_node", "research_agent_node")

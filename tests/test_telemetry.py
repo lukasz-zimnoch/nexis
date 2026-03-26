@@ -1,4 +1,5 @@
 """Tests for nexis.telemetry."""
+
 from __future__ import annotations
 
 import json
@@ -6,7 +7,7 @@ import logging
 
 import pytest
 
-from nexis.telemetry import instrument_node, log_llm_call
+from nexis.telemetry import instrument_node
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,5 @@
 """Base agent abstraction with structured output and retry."""
+
 from __future__ import annotations
 
 import asyncio
@@ -123,11 +124,15 @@ class BaseAgent:
                     )
                     continue
 
-                logger.debug("%s succeeded on attempt %d", self.__class__.__name__, attempt + 1)
+                logger.debug(
+                    "%s succeeded on attempt %d", self.__class__.__name__, attempt + 1
+                )
                 return parsed  # type: ignore[return-value]
             except asyncio.TimeoutError:
                 last_error = "Request timed out after 120 seconds"
-                logger.error("%s timed out on attempt %d", self.__class__.__name__, attempt + 1)
+                logger.error(
+                    "%s timed out on attempt %d", self.__class__.__name__, attempt + 1
+                )
             except (ValidationError, Exception) as exc:
                 last_error = str(exc)
                 logger.error(
@@ -150,7 +155,11 @@ class BaseAgent:
         for key, value in input_data.items():
             if hasattr(value, "model_dump_json"):
                 parts.append(f"{key}:\n{value.model_dump_json(indent=2)}")
-            elif isinstance(value, list) and value and hasattr(value[0], "model_dump_json"):
+            elif (
+                isinstance(value, list)
+                and value
+                and hasattr(value[0], "model_dump_json")
+            ):
                 items = "\n".join(v.model_dump_json(indent=2) for v in value)
                 parts.append(f"{key}:\n{items}")
             else:
@@ -177,7 +186,9 @@ class BaseAgent:
         try:
             return schema(**kwargs)
         except Exception as exc:
-            logger.error("Could not construct failure result for %s: %s", schema.__name__, exc)
+            logger.error(
+                "Could not construct failure result for %s: %s", schema.__name__, exc
+            )
             raise RuntimeError(
                 f"Agent {self.__class__.__name__} failed and cannot construct failure result: {reason}"
             ) from exc
@@ -185,7 +196,6 @@ class BaseAgent:
 
 def _minimal_value(annotation: Any) -> Any:
     """Return a minimal valid value for the given type annotation."""
-    import typing
 
     origin = getattr(annotation, "__origin__", None)
     if annotation is list or origin is list:

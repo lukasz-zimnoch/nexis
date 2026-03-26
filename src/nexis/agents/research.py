@@ -1,4 +1,5 @@
 """Research layer agents: ResearchAgent, TrendScanner, NicheValidator."""
+
 from __future__ import annotations
 
 import logging
@@ -61,7 +62,8 @@ class ResearchAgent(BaseAgent):
         """Search for web context then call LLM to generate ideas."""
         search_results = await self._search.search(research_prompt, max_results=5)
         search_context = "\n".join(
-            f"- {r.get('title', '')}: {r.get('content', '')[:200]}" for r in search_results
+            f"- {r.get('title', '')}: {r.get('content', '')[:200]}"
+            for r in search_results
         )
 
         input_data = {

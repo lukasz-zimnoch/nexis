@@ -1,4 +1,5 @@
 """Tests for the parent graph routing and retry logic."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -12,7 +13,6 @@ from nexis.graph import (
     should_retry,
     supervisor_node,
 )
-from nexis.state import PipelineState
 
 
 def make_state(
@@ -158,7 +158,9 @@ def test_graph_compiles():
 
 
 @pytest.mark.asyncio
-async def test_full_pipeline_happy_path(sample_config, sample_business_idea, sample_review, sample_mvp_plan, sample_gtm_plan):
+async def test_full_pipeline_happy_path(
+    sample_config, sample_business_idea, sample_review, sample_mvp_plan, sample_gtm_plan
+):
     """End-to-end mocked smoke test: verify data flows through all layers."""
     from nexis.state import (
         BusinessPlan,
@@ -171,18 +173,24 @@ async def test_full_pipeline_happy_path(sample_config, sample_business_idea, sam
     from datetime import datetime, timezone
 
     # Patch research layer
-    with patch("nexis.layers.research.TrendScanner") as mock_ts, \
-         patch("nexis.layers.research.ResearchAgent") as mock_ra, \
-         patch("nexis.layers.research.NicheValidator") as mock_nv, \
-         patch("nexis.layers.review.create_reviewer") as mock_cr, \
-         patch("nexis.layers.planning.MVPArchitect") as mock_mvp, \
-         patch("nexis.layers.planning.GTMStrategist") as mock_gtm, \
-         patch("nexis.layers.planning.BusinessPlanComposer") as mock_composer, \
-         patch("nexis.layers.output.DevilsAdvocate") as mock_da, \
-         patch("nexis.layers.output.ReportGenerator") as mock_rg:
-
+    with (
+        patch("nexis.layers.research.TrendScanner") as mock_ts,
+        patch("nexis.layers.research.ResearchAgent") as mock_ra,
+        patch("nexis.layers.research.NicheValidator") as mock_nv,
+        patch("nexis.layers.review.create_reviewer") as mock_cr,
+        patch("nexis.layers.planning.MVPArchitect") as mock_mvp,
+        patch("nexis.layers.planning.GTMStrategist") as mock_gtm,
+        patch("nexis.layers.planning.BusinessPlanComposer") as mock_composer,
+        patch("nexis.layers.output.DevilsAdvocate") as mock_da,
+        patch("nexis.layers.output.ReportGenerator") as mock_rg,
+    ):
         # Research layer mocks
-        from nexis.agents.research import TrendScannerOutput, ResearchOutput, NicheValidatorOutput
+        from nexis.agents.research import (
+            TrendScannerOutput,
+            ResearchOutput,
+            NicheValidatorOutput,
+        )
+
         mock_ts.return_value.invoke = AsyncMock(
             return_value=TrendScannerOutput(signals=[])
         )
@@ -195,9 +203,7 @@ async def test_full_pipeline_happy_path(sample_config, sample_business_idea, sam
 
         # Review layer mocks (score above threshold)
         reviewer_mock = MagicMock()
-        reviewer_mock.invoke_review = AsyncMock(
-            return_value=sample_review
-        )
+        reviewer_mock.invoke_review = AsyncMock(return_value=sample_review)
         mock_cr.return_value = reviewer_mock
 
         # Planning layer mocks
@@ -271,29 +277,42 @@ async def test_retry_edge_fires_when_no_ideas_pass_threshold(sample_config):
             return "retry"
         return "force_pass"
 
-    with patch("nexis.graph.should_retry", side_effect=track_should_retry), \
-         patch("nexis.layers.research.TrendScanner") as mock_ts, \
-         patch("nexis.layers.research.ResearchAgent") as mock_ra, \
-         patch("nexis.layers.research.NicheValidator") as mock_nv, \
-         patch("nexis.layers.review.create_reviewer") as mock_cr, \
-         patch("nexis.layers.planning.MVPArchitect") as mock_mvpa, \
-         patch("nexis.layers.planning.GTMStrategist") as mock_gtms, \
-         patch("nexis.layers.planning.BusinessPlanComposer") as mock_comp, \
-         patch("nexis.layers.output.DevilsAdvocate") as mock_da, \
-         patch("nexis.layers.output.ReportGenerator") as mock_rg:
-
-        from nexis.agents.research import TrendScannerOutput, ResearchOutput, NicheValidatorOutput
+    with (
+        patch("nexis.graph.should_retry", side_effect=track_should_retry),
+        patch("nexis.layers.research.TrendScanner") as mock_ts,
+        patch("nexis.layers.research.ResearchAgent") as mock_ra,
+        patch("nexis.layers.research.NicheValidator") as mock_nv,
+        patch("nexis.layers.review.create_reviewer") as mock_cr,
+        patch("nexis.layers.planning.MVPArchitect") as mock_mvpa,
+        patch("nexis.layers.planning.GTMStrategist") as mock_gtms,
+        patch("nexis.layers.planning.BusinessPlanComposer") as mock_comp,
+        patch("nexis.layers.output.DevilsAdvocate") as mock_da,
+        patch("nexis.layers.output.ReportGenerator") as mock_rg,
+    ):
+        from nexis.agents.research import (
+            TrendScannerOutput,
+            ResearchOutput,
+            NicheValidatorOutput,
+        )
         from nexis.state import OutputFormat, Report
         from datetime import datetime, timezone
 
-        mock_ts.return_value.invoke = AsyncMock(return_value=TrendScannerOutput(signals=[]))
+        mock_ts.return_value.invoke = AsyncMock(
+            return_value=TrendScannerOutput(signals=[])
+        )
         mock_ra.return_value.invoke = AsyncMock(return_value=ResearchOutput(ideas=[]))
-        mock_nv.return_value.invoke = AsyncMock(return_value=NicheValidatorOutput(ideas=[]))
-        mock_cr.return_value.invoke_review = AsyncMock(side_effect=Exception("no reviews"))
+        mock_nv.return_value.invoke = AsyncMock(
+            return_value=NicheValidatorOutput(ideas=[])
+        )
+        mock_cr.return_value.invoke_review = AsyncMock(
+            side_effect=Exception("no reviews")
+        )
         mock_mvpa.return_value.invoke_mvp = AsyncMock(side_effect=Exception("no plan"))
         mock_gtms.return_value.invoke_gtm = AsyncMock(side_effect=Exception("no plan"))
         mock_comp.return_value.invoke_plan = AsyncMock(side_effect=Exception("no plan"))
-        mock_da.return_value.invoke_rebuttal = AsyncMock(side_effect=Exception("no rebuttal"))
+        mock_da.return_value.invoke_rebuttal = AsyncMock(
+            side_effect=Exception("no rebuttal")
+        )
 
         report = Report(
             title="No ideas",

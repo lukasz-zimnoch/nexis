@@ -1,7 +1,7 @@
 """Tests for state models."""
+
 from __future__ import annotations
 
-import json
 
 import pytest
 from pydantic import ValidationError
@@ -9,22 +9,16 @@ from pydantic import ValidationError
 from nexis.state import (
     BusinessIdea,
     Challenge,
-    Channel,
     ComplexityRating,
-    Feature,
     GTMPlan,
-    LaunchPhase,
     MoSCoWPriority,
     MVPPlan,
     OutputFormat,
-    PricingModel,
     Rebuttal,
     Report,
     Review,
     ReviewerRole,
     Severity,
-    Sprint,
-    TechStack,
     TrendSignal,
     merge_dicts,
 )
@@ -167,7 +161,11 @@ def test_rebuttal_model():
     r = Rebuttal(
         idea_id="abc",
         challenges=[
-            Challenge(argument="Too crowded", evidence="100 competitors", counter_argument="Niche focus")
+            Challenge(
+                argument="Too crowded",
+                evidence="100 competitors",
+                counter_argument="Niche focus",
+            )
         ],
         severity=Severity.medium,
         suggested_mitigations=["Focus on niche"],

@@ -1,4 +1,5 @@
 """Parent graph — wires all four layer subgraphs with retry logic."""
+
 from __future__ import annotations
 
 import logging
@@ -29,7 +30,9 @@ def supervisor_node(state: PipelineState) -> dict:
         logger.info("Supervisor: starting pipeline (iteration 0)")
     else:
         logger.info("Supervisor: retry iteration %d", iteration)
-        prompt = prompt + " (previous ideas were too generic, focus on underserved niches)"
+        prompt = (
+            prompt + " (previous ideas were too generic, focus on underserved niches)"
+        )
 
     return {
         "research_prompt": prompt,
@@ -48,7 +51,9 @@ def force_pass_node(state: PipelineState) -> dict:
     config = state["config"]
 
     if not scores:
-        logger.warning("force_pass_node: no scores available — proceeding with empty top_ideas")
+        logger.warning(
+            "force_pass_node: no scores available — proceeding with empty top_ideas"
+        )
         return {"top_ideas": []}
 
     sorted_ids = sorted(scores.keys(), key=lambda k: scores[k], reverse=True)
@@ -85,7 +90,9 @@ def should_retry(state: PipelineState) -> str:
     max_retries = state["config"].max_retries
 
     if top_ideas:
-        logger.info("should_retry: %d ideas passed threshold → planning", len(top_ideas))
+        logger.info(
+            "should_retry: %d ideas passed threshold → planning", len(top_ideas)
+        )
         return "planning"
 
     if iteration < max_retries:
@@ -125,13 +132,20 @@ def build_graph(checkpointer=_USE_MEMORY) -> StateGraph:
     builder = StateGraph(PipelineState)
 
     # --- Nodes ---
-    builder.add_node("supervisor", instrument_node(supervisor_node, layer_id="orchestrator"))
+    builder.add_node(
+        "supervisor", instrument_node(supervisor_node, layer_id="orchestrator")
+    )
     builder.add_node("research", build_research_subgraph())
     builder.add_node("review", build_review_subgraph())
     builder.add_node("planning", build_planning_subgraph())
     builder.add_node("output", build_output_subgraph())
-    builder.add_node("increment_iteration", instrument_node(increment_iteration_node, layer_id="orchestrator"))
-    builder.add_node("force_pass", instrument_node(force_pass_node, layer_id="orchestrator"))
+    builder.add_node(
+        "increment_iteration",
+        instrument_node(increment_iteration_node, layer_id="orchestrator"),
+    )
+    builder.add_node(
+        "force_pass", instrument_node(force_pass_node, layer_id="orchestrator")
+    )
 
     # --- Edges ---
     builder.add_edge(START, "supervisor")
@@ -153,5 +167,7 @@ def build_graph(checkpointer=_USE_MEMORY) -> StateGraph:
     builder.add_edge("planning", "output")
     builder.add_edge("output", END)
 
-    resolved_checkpointer = MemorySaver() if checkpointer is _USE_MEMORY else checkpointer
+    resolved_checkpointer = (
+        MemorySaver() if checkpointer is _USE_MEMORY else checkpointer
+    )
     return builder.compile(checkpointer=resolved_checkpointer)
