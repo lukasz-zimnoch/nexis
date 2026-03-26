@@ -1,4 +1,5 @@
 """Integration tests for the full pipeline."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -21,7 +22,6 @@ from nexis.state import (
 def integration_config():
     return PipelineConfig(
         research_prompt="Find SaaS ideas for developer tools",
-        model_name="claude-sonnet-4-6",
         num_ideas=4,
         top_k=2,
         score_threshold=0.55,
@@ -38,28 +38,35 @@ async def test_mocked_smoke_test(
     sample_gtm_plan,
 ):
     """Full pipeline smoke test with ALL LLM calls mocked."""
-    with patch("nexis.layers.research.TrendScanner") as mock_ts, \
-         patch("nexis.layers.research.ResearchAgent") as mock_ra, \
-         patch("nexis.layers.research.NicheValidator") as mock_nv, \
-         patch("nexis.layers.review.create_reviewer") as mock_cr, \
-         patch("nexis.layers.planning.MVPArchitect") as mock_mvp, \
-         patch("nexis.layers.planning.GTMStrategist") as mock_gtm, \
-         patch("nexis.layers.planning.BusinessPlanComposer") as mock_composer, \
-         patch("nexis.layers.output.DevilsAdvocate") as mock_da, \
-         patch("nexis.layers.output.ReportGenerator") as mock_rg:
-
-        from nexis.agents.research import TrendScannerOutput, ResearchOutput, NicheValidatorOutput
+    with (
+        patch("nexis.layers.research.TrendScanner") as mock_ts,
+        patch("nexis.layers.research.ResearchAgent") as mock_ra,
+        patch("nexis.layers.research.NicheValidator") as mock_nv,
+        patch("nexis.layers.review.create_reviewer") as mock_cr,
+        patch("nexis.layers.planning.MVPArchitect") as mock_mvp,
+        patch("nexis.layers.planning.GTMStrategist") as mock_gtm,
+        patch("nexis.layers.planning.BusinessPlanComposer") as mock_composer,
+        patch("nexis.layers.output.DevilsAdvocate") as mock_da,
+        patch("nexis.layers.output.ReportGenerator") as mock_rg,
+    ):
+        from nexis.agents.research import (
+            TrendScannerOutput,
+            ResearchOutput,
+            NicheValidatorOutput,
+        )
         from nexis.state import TrendSignal
 
         mock_ts.return_value.invoke = AsyncMock(
-            return_value=TrendScannerOutput(signals=[
-                TrendSignal(
-                    source="HN",
-                    signal="AI dev tools trending",
-                    url="https://hn.com/1",
-                    timestamp="2026-03-22T00:00:00Z",
-                )
-            ])
+            return_value=TrendScannerOutput(
+                signals=[
+                    TrendSignal(
+                        source="HN",
+                        signal="AI dev tools trending",
+                        url="https://hn.com/1",
+                        timestamp="2026-03-22T00:00:00Z",
+                    )
+                ]
+            )
         )
         mock_ra.return_value.invoke = AsyncMock(
             return_value=ResearchOutput(ideas=[sample_business_idea])
@@ -105,6 +112,7 @@ async def test_mocked_smoke_test(
         mock_rg.return_value.generate = MagicMock(return_value=report)
 
         from nexis.graph import build_graph
+
         graph = build_graph()  # uses MemorySaver by default
         initial_state = {
             "config": integration_config,
@@ -155,9 +163,12 @@ async def test_live_pipeline():
     )
 
     from nexis import arun_pipeline
+
     reports = await arun_pipeline(config)
 
     assert len(reports) >= 1
     assert reports[0].ideas_evaluated >= 1
-    print(f"\nLive test: {reports[0].ideas_evaluated} ideas evaluated, {reports[0].ideas_selected} selected")
+    print(
+        f"\nLive test: {reports[0].ideas_evaluated} ideas evaluated, {reports[0].ideas_selected} selected"
+    )
     print(reports[0].content[:500])
