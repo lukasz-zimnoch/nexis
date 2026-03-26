@@ -104,7 +104,7 @@ For each idea that passed Layer 2's filter, two agents run concurrently (via `as
 |---|---|---|---|
 | **MVP Architect** | Defines core features (MoSCoW), tech stack recommendation, data model sketch, 4–8 week sprint plan, and estimated build cost. | In: `BusinessIdea` + `Reviews` · Out: `MVPPlan` | LLM |
 | **GTM Strategist** | Defines ICP, positioning, channel strategy (SEO/community/paid), pricing model, launch sequence, first 100 customers playbook. | In: `BusinessIdea` + `Reviews` · Out: `GTMPlan` | LLM |
-| **Business Plan Composer** | Merges MVP scope + GTM into a cohesive plan per idea. Adds executive summary, key assumptions, success metrics. | In: `MVPPlan` + `GTMPlan` · Out: `BusinessPlan` | LLM |
+| **Business Plan Composer** | Merges MVP scope + GTM into a cohesive plan per idea. Adds executive summary, key assumptions, success metrics. | In: `BusinessIdea` + `MVPPlan` + `GTMPlan` · Out: `BusinessPlan` | LLM |
 
 ### 3.5 Layer 4 — Validation & Output
 
@@ -229,10 +229,14 @@ Each layer is implemented as an independent LangGraph `StateGraph` (subgraph) wi
 The parent graph structure is:
 
 ```
-START → supervisor → research_subgraph → review_subgraph → planning_subgraph → output_subgraph → END
+START → supervisor → research → review → [should_retry] → planning → output → END
+                         ↑                     ↓
+                   supervisor ← increment_iteration   (retry path)
+                                               ↓
+                                          force_pass → planning   (retries exhausted)
 ```
 
-Conditional edge from `review_subgraph`: if `max(scores) < threshold` AND `iteration < max_retries`, route back to `research_subgraph` with incremented iteration counter.
+After the `review` node, a conditional edge routes to one of three targets based on whether ideas passed the threshold and whether retries remain (see §5.4 for details).
 
 ### 5.2 Fan-Out with Send()
 

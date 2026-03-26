@@ -37,10 +37,10 @@ The parent graph in `graph.py` owns `PipelineState` and handles the conditional 
 
 ## Checkpointer
 
-The pipeline uses `SqliteSaver` for checkpointing (set `CHECKPOINT_DB=./nexis_dev.db` in `.env`). `SqliteSaver.from_conn_string()` takes a file path, not a SQLAlchemy URL. Never hardcode connection strings.
+The pipeline uses `SqliteSaver` for checkpointing (set `CHECKPOINT_DB_PATH=./nexis_dev.db` in `.env`). `SqliteSaver.from_conn_string()` takes a file path, not a SQLAlchemy URL. Never hardcode connection strings.
 
 ## Testing
 
 - Unit tests live in `tests/test_agents/` — test each agent in isolation with mocked LLM calls
 - Layer tests live in `tests/test_layers/` — test subgraph routing and state transitions
-- `tests/test_integration.py` runs the full pipeline; only run against real APIs, not in CI
+- `tests/test_integration.py` has a mocked smoke test (runs in CI) and a `@pytest.mark.live` test (real APIs, skipped in CI)
