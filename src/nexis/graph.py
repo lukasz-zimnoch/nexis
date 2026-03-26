@@ -108,13 +108,17 @@ def should_retry(state: PipelineState) -> str:
 # ---------------------------------------------------------------------------
 
 
-def build_graph(checkpointer=None) -> StateGraph:
+_USE_MEMORY = object()
+
+
+def build_graph(checkpointer=_USE_MEMORY) -> StateGraph:
     """Build and compile the full Nexis pipeline graph.
 
     Args:
-        checkpointer: Optional LangGraph checkpointer instance. Defaults to
-            MemorySaver when None. For persistent checkpointing, pass an
-            SqliteSaver instance (obtained from the context manager).
+        checkpointer: LangGraph checkpointer instance. Defaults to MemorySaver
+            when not provided. Pass None to skip checkpointing (e.g. when the
+            LangGraph Platform injects its own checkpointer). For persistent
+            checkpointing, pass an SqliteSaver instance.
     """
     from langgraph.checkpoint.memory import MemorySaver
 
@@ -149,5 +153,5 @@ def build_graph(checkpointer=None) -> StateGraph:
     builder.add_edge("planning", "output")
     builder.add_edge("output", END)
 
-    resolved_checkpointer = checkpointer if checkpointer is not None else MemorySaver()
+    resolved_checkpointer = MemorySaver() if checkpointer is _USE_MEMORY else checkpointer
     return builder.compile(checkpointer=resolved_checkpointer)
