@@ -1,4 +1,5 @@
 """Trend scraping via site-scoped search queries."""
+
 from __future__ import annotations
 
 import logging
@@ -22,7 +23,9 @@ class TrendScraperTool:
     def __init__(self) -> None:
         self._search = SearchTool()
 
-    async def scrape(self, keywords: list[str], max_per_source: int = 3) -> list[TrendSignal]:
+    async def scrape(
+        self, keywords: list[str], max_per_source: int = 3
+    ) -> list[TrendSignal]:
         """Scrape trend signals for the given keyword seeds."""
         signals: list[TrendSignal] = []
         keyword_str = " OR ".join(f'"{kw}"' for kw in keywords[:5])

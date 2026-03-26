@@ -77,10 +77,20 @@ REVIEWER_MODELS: dict[str, str] = {
     "ai_resilience": REVIEWER_AI_RESILIENCE,
 }
 
-AGENT_MODEL_KEYS = tuple([
-    "trend_scanner", "research_agent", "niche_validator",
-    "reviewer_market", "reviewer_technical", "reviewer_moat",
-    "reviewer_financial", "reviewer_risk", "reviewer_ai_resilience",
-    "mvp_architect", "gtm_strategist", "business_plan_composer",
-    "devils_advocate",
-])
+AGENT_MODEL_KEYS = tuple(
+    [
+        "trend_scanner",
+        "research_agent",
+        "niche_validator",
+        "reviewer_market",
+        "reviewer_technical",
+        "reviewer_moat",
+        "reviewer_financial",
+        "reviewer_risk",
+        "reviewer_ai_resilience",
+        "mvp_architect",
+        "gtm_strategist",
+        "business_plan_composer",
+        "devils_advocate",
+    ]
+)

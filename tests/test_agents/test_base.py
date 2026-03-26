@@ -1,4 +1,5 @@
 """Tests for BaseAgent."""
+
 from __future__ import annotations
 
 import asyncio
@@ -7,9 +8,9 @@ import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
-from nexis.agents.base import BaseAgent, _minimal_value, build_llm
+from nexis.agents.base import BaseAgent, _minimal_value
 
 
 class SimpleOutput(BaseModel):
@@ -74,9 +75,7 @@ async def test_happy_path(mock_llm):
 @pytest.mark.asyncio
 async def test_retry_on_failure_then_success(mock_llm):
     good = SimpleOutput(answer="OK", score=5)
-    mock_llm.ainvoke = AsyncMock(
-        side_effect=[Exception("LLM error"), _wrap(good)]
-    )
+    mock_llm.ainvoke = AsyncMock(side_effect=[Exception("LLM error"), _wrap(good)])
 
     agent = make_agent(mock_llm)
     result = await agent.invoke({"q": "test"})
@@ -142,6 +141,7 @@ def test_build_llm_uses_openrouter(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
     with patch("nexis.agents.base.ChatOpenAI") as mock:
         import nexis.agents.base as base
+
         base.build_llm("anthropic/claude-opus-4-6")
     mock.assert_called_once()
     assert mock.call_args.kwargs["base_url"] == "https://openrouter.ai/api/v1"
@@ -160,8 +160,7 @@ async def test_token_usage_logged(mock_llm, caplog):
     llm_events = [
         json.loads(r.message)
         for r in caplog.records
-        if r.name == "nexis.telemetry"
-        and "llm_call" in r.message
+        if r.name == "nexis.telemetry" and "llm_call" in r.message
     ]
     assert len(llm_events) == 1
     event = llm_events[0]

@@ -1,4 +1,5 @@
 """Layer 3: Planning — parallel MVP + GTM branches per top idea."""
+
 from __future__ import annotations
 
 import asyncio
@@ -69,15 +70,22 @@ async def plan_idea_node(state: PlanningLayerState) -> dict:
 
     logger.info("Planning idea %s (%s)", idea_id, idea.title)
 
-    mvp_architect = MVPArchitect(model_name=config.model_for("mvp_architect"), max_retries=config.max_retries)
-    gtm_strategist = GTMStrategist(model_name=config.model_for("gtm_strategist"), max_retries=config.max_retries)
+    mvp_architect = MVPArchitect(
+        model_name=config.model_for("mvp_architect"), max_retries=config.max_retries
+    )
+    gtm_strategist = GTMStrategist(
+        model_name=config.model_for("gtm_strategist"), max_retries=config.max_retries
+    )
 
     mvp, gtm = await asyncio.gather(
         mvp_architect.invoke_mvp(idea, idea_reviews),
         gtm_strategist.invoke_gtm(idea, idea_reviews),
     )
 
-    composer = BusinessPlanComposer(model_name=config.model_for("business_plan_composer"), max_retries=config.max_retries)
+    composer = BusinessPlanComposer(
+        model_name=config.model_for("business_plan_composer"),
+        max_retries=config.max_retries,
+    )
     plan = await composer.invoke_plan(idea, mvp, gtm)
 
     logger.info("Finished planning idea %s", idea_id)
@@ -98,7 +106,9 @@ def build_planning_subgraph() -> StateGraph:
     """Build and compile the Layer 3 planning subgraph."""
     builder = StateGraph(PipelineState)
 
-    builder.add_node("plan_idea_node", instrument_node(plan_idea_node, layer_id="planning"))
+    builder.add_node(
+        "plan_idea_node", instrument_node(plan_idea_node, layer_id="planning")
+    )
 
     # Conditional fan-out from START: if top_ideas is empty, goes straight to END
     builder.add_conditional_edges(START, route_to_planners, ["plan_idea_node"])

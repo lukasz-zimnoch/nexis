@@ -1,7 +1,8 @@
 """Tests for the Layer 3 planning subgraph."""
+
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -101,7 +102,9 @@ async def test_planning_layer_populates_plans_for_two_ideas(
             return sample_gtm_plan if idea.id == sample_business_idea.id else gtm2
 
         async def plan_side_effect(idea, mvp, gtm):
-            return business_plan1 if idea.id == sample_business_idea.id else business_plan2
+            return (
+                business_plan1 if idea.id == sample_business_idea.id else business_plan2
+            )
 
         MockMVP.return_value.invoke_mvp = AsyncMock(side_effect=mvp_side_effect)
         MockGTM.return_value.invoke_gtm = AsyncMock(side_effect=gtm_side_effect)
@@ -124,7 +127,9 @@ async def test_planning_layer_populates_plans_for_two_ideas(
     assert sample_business_idea.id in result["business_plans"]
     assert "idea-002" in result["business_plans"]
 
-    assert result["business_plans"][sample_business_idea.id].executive_summary == "Plan 1"
+    assert (
+        result["business_plans"][sample_business_idea.id].executive_summary == "Plan 1"
+    )
     assert result["business_plans"]["idea-002"].executive_summary == "Plan 2"
 
 

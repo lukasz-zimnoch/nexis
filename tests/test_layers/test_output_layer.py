@@ -1,4 +1,5 @@
 """Tests for the Layer 4 output subgraph."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -100,7 +101,11 @@ def sample_gtm(sample_idea: BusinessIdea) -> GTMPlan:
         icp="Engineering teams at 10-200 person startups",
         positioning="AI code reviewer that catches bugs humans miss",
         channels=[
-            Channel(name="HackerNews", rationale="Technical founders", estimated_cost_usd=0.0)
+            Channel(
+                name="HackerNews",
+                rationale="Technical founders",
+                estimated_cost_usd=0.0,
+            )
         ],
         pricing_model=PricingModel(
             strategy="per-seat",
@@ -240,7 +245,9 @@ async def test_devils_advocate_node_handles_exception_gracefully(
 
     with patch("nexis.layers.output.DevilsAdvocate") as MockAdvocate:
         mock_instance = MagicMock()
-        mock_instance.invoke_rebuttal = AsyncMock(side_effect=RuntimeError("LLM timeout"))
+        mock_instance.invoke_rebuttal = AsyncMock(
+            side_effect=RuntimeError("LLM timeout")
+        )
         MockAdvocate.return_value = mock_instance
 
         from nexis.layers.output import devils_advocate_node

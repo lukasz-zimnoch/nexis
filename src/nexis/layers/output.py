@@ -1,4 +1,5 @@
 """Layer 4: Output subgraph — Devil's Advocate validation and report generation."""
+
 from __future__ import annotations
 
 import asyncio
@@ -28,9 +29,13 @@ async def devils_advocate_node(state: PipelineState) -> dict:
         logger.info("devils_advocate_node: no top ideas — skipping validation")
         return {"rebuttals": {}}
 
-    advocate = DevilsAdvocate(model_name=config.model_for("devils_advocate"), max_retries=config.max_retries)
+    advocate = DevilsAdvocate(
+        model_name=config.model_for("devils_advocate"), max_retries=config.max_retries
+    )
 
-    plans = [business_plans[idea_id] for idea_id in top_idea_ids if idea_id in business_plans]
+    plans = [
+        business_plans[idea_id] for idea_id in top_idea_ids if idea_id in business_plans
+    ]
 
     if not plans:
         logger.warning(
@@ -76,8 +81,12 @@ async def report_generator_node(state: PipelineState) -> dict:
 def build_output_subgraph():
     """Build and compile the Layer 4 output subgraph."""
     builder = StateGraph(PipelineState)
-    builder.add_node("devils_advocate", instrument_node(devils_advocate_node, layer_id="output"))
-    builder.add_node("report_generator", instrument_node(report_generator_node, layer_id="output"))
+    builder.add_node(
+        "devils_advocate", instrument_node(devils_advocate_node, layer_id="output")
+    )
+    builder.add_node(
+        "report_generator", instrument_node(report_generator_node, layer_id="output")
+    )
     builder.add_edge(START, "devils_advocate")
     builder.add_edge("devils_advocate", "report_generator")
     builder.add_edge("report_generator", END)

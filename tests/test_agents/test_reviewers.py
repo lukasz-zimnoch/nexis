@@ -1,9 +1,14 @@
 """Tests for ReviewerAgent and ReviewSynthesizer."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+from nexis.agents.reviewers import ReviewSynthesizer, ReviewerAgent, create_reviewer
+from nexis.config import PipelineConfig
+from nexis.state import BusinessIdea, Review, ReviewerRole
 
 
 def _wrap(parsed):
@@ -11,10 +16,6 @@ def _wrap(parsed):
     raw = MagicMock()
     raw.usage_metadata = {"input_tokens": 10, "output_tokens": 20, "total_tokens": 30}
     return {"parsed": parsed, "raw": raw, "parsing_error": None}
-
-from nexis.agents.reviewers import ReviewSynthesizer, ReviewerAgent, create_reviewer
-from nexis.config import PipelineConfig
-from nexis.state import BusinessIdea, Review, ReviewerRole
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +79,9 @@ def mock_llm_chain():
         yield mock_chain
 
 
-def make_review(idea_id: str, role: ReviewerRole, score: int = 7, confidence: float = 0.9) -> Review:
+def make_review(
+    idea_id: str, role: ReviewerRole, score: int = 7, confidence: float = 0.9
+) -> Review:
     return Review(
         idea_id=idea_id,
         reviewer_role=role,
@@ -199,7 +202,9 @@ def test_synthesizer_correct_weighted_calculation(config, idea_a):
     synthesizer = ReviewSynthesizer()
     scores, top_ideas = synthesizer.synthesize(reviews, config, [idea_a])
 
-    expected_score = (0.25 * 8 + 0.20 * 6 + 0.15 * 7 + 0.20 * 5 + 0.10 * 4 + 0.10 * 6) / 10
+    expected_score = (
+        0.25 * 8 + 0.20 * 6 + 0.15 * 7 + 0.20 * 5 + 0.10 * 4 + 0.10 * 6
+    ) / 10
     assert abs(scores[idea_a.id] - expected_score) < 1e-9
     assert idea_a.id in top_ideas  # 0.625 >= 0.55 threshold
 
@@ -251,7 +256,9 @@ def test_synthesizer_top_k_filtering(config, idea_a, idea_b, idea_c):
             reviews.append(make_review(idea.id, role, score=9, confidence=1.0))
 
     synthesizer = ReviewSynthesizer()
-    scores, top_ideas = synthesizer.synthesize(reviews, cfg_top2, [idea_a, idea_b, idea_c])
+    scores, top_ideas = synthesizer.synthesize(
+        reviews, cfg_top2, [idea_a, idea_b, idea_c]
+    )
 
     assert len(top_ideas) == 2
     assert len(scores) == 3
@@ -285,7 +292,9 @@ def test_synthesizer_reviews_with_failure_reason_are_skipped(config, idea_a):
         confidence=0.0,
         failure_reason="LLM timed out",
     )
-    good_review = make_review(idea_a.id, ReviewerRole.technical, score=10, confidence=1.0)
+    good_review = make_review(
+        idea_a.id, ReviewerRole.technical, score=10, confidence=1.0
+    )
 
     reviews = [failed_review, good_review]
 

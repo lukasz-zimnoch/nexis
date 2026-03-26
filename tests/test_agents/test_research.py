@@ -1,16 +1,10 @@
 """Unit tests for research agents with mocked LLM calls."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-
-def _wrap(parsed):
-    """Wrap a parsed result in the include_raw=True dict format."""
-    raw = MagicMock()
-    raw.usage_metadata = {"input_tokens": 10, "output_tokens": 20, "total_tokens": 30}
-    return {"parsed": parsed, "raw": raw, "parsing_error": None}
 
 from nexis.agents.research import (
     NicheValidator,
@@ -21,6 +15,13 @@ from nexis.agents.research import (
     TrendScannerOutput,
 )
 from nexis.state import BusinessIdea, TrendSignal
+
+
+def _wrap(parsed):
+    """Wrap a parsed result in the include_raw=True dict format."""
+    raw = MagicMock()
+    raw.usage_metadata = {"input_tokens": 10, "output_tokens": 20, "total_tokens": 30}
+    return {"parsed": parsed, "raw": raw, "parsing_error": None}
 
 
 # ---------------------------------------------------------------------------
@@ -204,8 +205,8 @@ class TestNicheValidator:
         """NicheValidator should filter out dominated ideas."""
         all_ideas = [
             make_business_idea("AI Email Client"),  # dominated by Google/Microsoft
-            make_business_idea("Niche DevTool"),    # viable niche
-            make_business_idea("AI Code Review"),   # dominated
+            make_business_idea("Niche DevTool"),  # viable niche
+            make_business_idea("AI Code Review"),  # dominated
         ]
         # LLM filters to only the viable one
         filtered_ideas = [make_business_idea("Niche DevTool")]

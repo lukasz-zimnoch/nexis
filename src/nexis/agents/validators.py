@@ -1,4 +1,5 @@
 """Validation layer agents: DevilsAdvocate and ReportGenerator."""
+
 from __future__ import annotations
 
 import importlib.resources
@@ -9,7 +10,7 @@ from datetime import datetime, timezone
 from jinja2 import DictLoader, Environment
 
 from nexis.agents.base import BaseAgent
-from nexis.state import BusinessPlan, OutputFormat, PipelineState, Rebuttal, Report
+from nexis.state import BusinessPlan, OutputFormat, Rebuttal, Report
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +164,8 @@ class ReportGenerator:
             idea_card_template = (templates_ref / "idea_card.md.j2").read_text()
         except Exception as exc:
             logger.warning(
-                "Could not load templates from package resources (%s) — using defaults", exc
+                "Could not load templates from package resources (%s) — using defaults",
+                exc,
             )
             report_template = DEFAULT_REPORT_TEMPLATE
             idea_card_template = DEFAULT_IDEA_CARD_TEMPLATE
@@ -192,7 +194,13 @@ class ReportGenerator:
             content = self._render_json(state)
         else:
             content = self._render_markdown(
-                state, top_ideas, scores, mvp_plans, gtm_plans, business_plans, rebuttals
+                state,
+                top_ideas,
+                scores,
+                mvp_plans,
+                gtm_plans,
+                business_plans,
+                rebuttals,
             )
 
         return Report(
@@ -228,7 +236,9 @@ class ReportGenerator:
                 rebuttals=rebuttals,
             )
         except Exception as exc:
-            logger.warning("Template rendering failed (%s) — using plain-text fallback", exc)
+            logger.warning(
+                "Template rendering failed (%s) — using plain-text fallback", exc
+            )
             if not top_ideas:
                 return "# Nexis Business Idea Report\n\nNo viable ideas found."
             lines = ["# Nexis Business Idea Report\n"]

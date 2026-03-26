@@ -1,4 +1,5 @@
 """CLI entry point for the Nexis pipeline."""
+
 from __future__ import annotations
 
 import argparse
@@ -83,7 +84,10 @@ def main() -> None:
 
     if args.model_name is not None:
         from nexis import models as _models
-        config_kwargs["agent_models"] = {k: args.model_name for k in _models.AGENT_MODEL_KEYS}
+
+        config_kwargs["agent_models"] = {
+            k: args.model_name for k in _models.AGENT_MODEL_KEYS
+        }
 
     config = PipelineConfig(**config_kwargs)
 

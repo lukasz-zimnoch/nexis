@@ -1,4 +1,5 @@
 """Tests for DevilsAdvocate and ReportGenerator agents."""
+
 from __future__ import annotations
 
 import json
@@ -6,19 +7,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
-def _wrap(parsed):
-    """Wrap a parsed result in the include_raw=True dict format."""
-    raw = MagicMock()
-    raw.usage_metadata = {"input_tokens": 10, "output_tokens": 20, "total_tokens": 30}
-    return {"parsed": parsed, "raw": raw, "parsing_error": None}
-
 from nexis.agents.validators import ReportGenerator
 from nexis.config import PipelineConfig
 from nexis.state import (
     BusinessIdea,
     BusinessPlan,
     Challenge,
+    Channel,
     ComplexityRating,
     Feature,
     GTMPlan,
@@ -32,8 +27,14 @@ from nexis.state import (
     Sprint,
     TechStack,
     TrendSignal,
-    Channel,
 )
+
+
+def _wrap(parsed):
+    """Wrap a parsed result in the include_raw=True dict format."""
+    raw = MagicMock()
+    raw.usage_metadata = {"input_tokens": 10, "output_tokens": 20, "total_tokens": 30}
+    return {"parsed": parsed, "raw": raw, "parsing_error": None}
 
 
 # ---------------------------------------------------------------------------
@@ -106,7 +107,11 @@ def sample_gtm(sample_idea: BusinessIdea) -> GTMPlan:
         icp="Engineering teams at 10-200 person startups",
         positioning="AI code reviewer that catches bugs humans miss",
         channels=[
-            Channel(name="HackerNews", rationale="Technical founders", estimated_cost_usd=0.0)
+            Channel(
+                name="HackerNews",
+                rationale="Technical founders",
+                estimated_cost_usd=0.0,
+            )
         ],
         pricing_model=PricingModel(
             strategy="per-seat",
@@ -126,11 +131,16 @@ def sample_gtm(sample_idea: BusinessIdea) -> GTMPlan:
 
 
 @pytest.fixture
-def sample_business_plan(sample_idea: BusinessIdea, sample_mvp: MVPPlan, sample_gtm: GTMPlan) -> BusinessPlan:
+def sample_business_plan(
+    sample_idea: BusinessIdea, sample_mvp: MVPPlan, sample_gtm: GTMPlan
+) -> BusinessPlan:
     return BusinessPlan(
         idea_id=sample_idea.id,
         executive_summary="An AI-powered code review tool for engineering teams.",
-        key_assumptions=["LLMs can catch meaningful bugs", "Teams will pay for automation"],
+        key_assumptions=[
+            "LLMs can catch meaningful bugs",
+            "Teams will pay for automation",
+        ],
         success_metrics=["100 paying teams in 6 months", "$10k MRR"],
         mvp_plan=sample_mvp,
         gtm_plan=sample_gtm,
@@ -149,7 +159,10 @@ def sample_rebuttal(sample_idea: BusinessIdea) -> Rebuttal:
             )
         ],
         severity=Severity.medium,
-        suggested_mitigations=["Focus on niche: open-source projects", "Offer GitHub integration"],
+        suggested_mitigations=[
+            "Focus on niche: open-source projects",
+            "Offer GitHub integration",
+        ],
         overall_survivability=0.65,
     )
 
@@ -175,7 +188,9 @@ async def test_devils_advocate_returns_rebuttal_with_correct_idea_id(
     sample_rebuttal: Rebuttal,
 ):
     """DevilsAdvocate should return a Rebuttal whose idea_id matches the plan's idea_id."""
-    mock_llm_for_devils_advocate.ainvoke = AsyncMock(return_value=_wrap(sample_rebuttal))
+    mock_llm_for_devils_advocate.ainvoke = AsyncMock(
+        return_value=_wrap(sample_rebuttal)
+    )
 
     from nexis.agents.validators import DevilsAdvocate
 
@@ -201,7 +216,9 @@ async def test_devils_advocate_failure_raises(
     unrecoverable failure. Callers (e.g., devils_advocate_node) must handle this
     via asyncio.gather(return_exceptions=True).
     """
-    mock_llm_for_devils_advocate.ainvoke = AsyncMock(side_effect=Exception("LLM unavailable"))
+    mock_llm_for_devils_advocate.ainvoke = AsyncMock(
+        side_effect=Exception("LLM unavailable")
+    )
 
     from nexis.agents.validators import DevilsAdvocate
 
@@ -248,7 +265,11 @@ def test_report_generator_markdown_contains_expected_sections(
 ):
     """Markdown report should include idea title, MVP plan, GTM plan, and rebuttal sections."""
     state = _make_state(
-        sample_config, sample_idea, mvp=sample_mvp, gtm=sample_gtm, rebuttal=sample_rebuttal
+        sample_config,
+        sample_idea,
+        mvp=sample_mvp,
+        gtm=sample_gtm,
+        rebuttal=sample_rebuttal,
     )
     generator = ReportGenerator()
     report = generator.generate(state)
