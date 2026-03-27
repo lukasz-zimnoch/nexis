@@ -132,16 +132,8 @@ class DevilsAdvocate(BaseAgent):
     async def invoke_rebuttal(self, plan: BusinessPlan) -> Rebuttal:
         """Generate an adversarial rebuttal for the given business plan."""
         result = await self.invoke({"business_plan": plan})
-        # Ensure idea_id is correctly set when the call succeeds
         if result.failure_reason is None:
-            result = Rebuttal(
-                idea_id=plan.idea_id,
-                challenges=result.challenges,
-                severity=result.severity,
-                suggested_mitigations=result.suggested_mitigations,
-                overall_survivability=result.overall_survivability,
-                failure_reason=result.failure_reason,
-            )
+            result = result.model_copy(update={"idea_id": plan.idea_id})
         return result  # type: ignore[return-value]
 
 
@@ -184,24 +176,11 @@ class ReportGenerator:
         ideas = state.get("ideas", [])
         top_ideas_ids = state.get("top_ideas", [])
         top_ideas = [i for i in ideas if i.id in top_ideas_ids]
-        scores = state.get("scores", {})
-        mvp_plans = state.get("mvp_plans", {})
-        gtm_plans = state.get("gtm_plans", {})
-        business_plans = state.get("business_plans", {})
-        rebuttals = state.get("rebuttals", {})
 
         if config.output_format == "json":
-            content = self._render_json(state)
+            content = self._render_json(state, top_ideas)
         else:
-            content = self._render_markdown(
-                state,
-                top_ideas,
-                scores,
-                mvp_plans,
-                gtm_plans,
-                business_plans,
-                rebuttals,
-            )
+            content = self._render_markdown(state, top_ideas)
 
         return Report(
             title="Nexis Business Idea Report",
@@ -212,17 +191,9 @@ class ReportGenerator:
             format=OutputFormat(config.output_format),
         )
 
-    def _render_markdown(
-        self,
-        state: dict,
-        top_ideas: list,
-        scores: dict,
-        mvp_plans: dict,
-        gtm_plans: dict,
-        business_plans: dict,
-        rebuttals: dict,
-    ) -> str:
+    def _render_markdown(self, state: dict, top_ideas: list) -> str:
         """Render the Markdown report template, falling back to plain text on error."""
+        scores = state.get("scores", {})
         try:
             template = self._env.get_template("report.md.j2")
             return template.render(
@@ -230,10 +201,10 @@ class ReportGenerator:
                 top_ideas=top_ideas,
                 ideas_evaluated=len(state.get("ideas", [])),
                 scores=scores,
-                mvp_plans=mvp_plans,
-                gtm_plans=gtm_plans,
-                business_plans=business_plans,
-                rebuttals=rebuttals,
+                mvp_plans=state.get("mvp_plans", {}),
+                gtm_plans=state.get("gtm_plans", {}),
+                business_plans=state.get("business_plans", {}),
+                rebuttals=state.get("rebuttals", {}),
             )
         except Exception as exc:
             logger.warning(
@@ -247,13 +218,10 @@ class ReportGenerator:
                 lines.append(f"Score: {scores.get(idea.id, 0):.2f}")
             return "\n".join(lines)
 
-    def _render_json(self, state: dict) -> str:
+    def _render_json(self, state: dict, top_ideas: list) -> str:
         """Render the pipeline state as a JSON report."""
-        ideas = state.get("ideas", [])
-        top_ideas_ids = state.get("top_ideas", [])
-        top_ideas = [i for i in ideas if i.id in top_ideas_ids]
         data = {
-            "ideas_evaluated": len(ideas),
+            "ideas_evaluated": len(state.get("ideas", [])),
             "top_ideas": [i.model_dump() for i in top_ideas],
             "scores": state.get("scores", {}),
         }
