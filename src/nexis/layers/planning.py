@@ -4,43 +4,25 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
 
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
-from typing_extensions import TypedDict
 
 from nexis.agents.planners import BusinessPlanComposer, GTMStrategist, MVPArchitect
 from nexis.telemetry import instrument_node
-from nexis.state import (
-    BusinessIdea,
-    BusinessPlan,
-    GTMPlan,
-    MVPPlan,
-    PipelineState,
-    Review,
-)
+from nexis.state import BusinessIdea, PipelineState, Review
 
 logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Planning layer state
+# Planning node state
 # ---------------------------------------------------------------------------
 
 
-class PlanningLayerState(TypedDict, total=False):
-    """PipelineState fields plus per-idea routing key used by Send()."""
+class PlanningNodeState(PipelineState):
+    """PipelineState extended with per-idea routing key used by Send()."""
 
-    # Inherited from PipelineState (subset that plan_idea_node needs)
-    config: Any
-    ideas: list[BusinessIdea]
-    reviews: list[Review]
-    top_ideas: list[str]
-    mvp_plans: dict[str, MVPPlan]
-    gtm_plans: dict[str, GTMPlan]
-    business_plans: dict[str, BusinessPlan]
-    # Routing field injected by Send()
     idea_to_plan_id: str
 
 
@@ -49,7 +31,7 @@ class PlanningLayerState(TypedDict, total=False):
 # ---------------------------------------------------------------------------
 
 
-def route_to_planners(state: PlanningLayerState) -> list[Send]:
+def route_to_planners(state: PipelineState) -> list[Send]:
     """Fan-out: one Send per top idea."""
     top_ideas: list[str] = state.get("top_ideas", [])
     return [
@@ -58,7 +40,7 @@ def route_to_planners(state: PlanningLayerState) -> list[Send]:
     ]
 
 
-async def plan_idea_node(state: PlanningLayerState) -> dict:
+async def plan_idea_node(state: PlanningNodeState) -> dict:
     """Run MVP + GTM planners concurrently, then compose the business plan."""
     idea_id: str = state["idea_to_plan_id"]
     ideas: list[BusinessIdea] = state["ideas"]
