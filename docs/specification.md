@@ -52,7 +52,7 @@ The pipeline consists of four layers: Deep Research (idea generation), Parallel 
 The system executes as a directed acyclic graph (DAG) with four sequential layers and one conditional retry edge:
 
 1. **Layer 1 — Deep Research:** Research Agent + sub-agents scan the web, identify trends, and produce N candidate business ideas with structured metadata.
-2. **Layer 2 — Parallel Review Panel:** Each idea is evaluated in parallel by 5 specialist critic agents. A Synthesis node aggregates scores, ranks ideas, and filters the top K above a configurable threshold.
+2. **Layer 2 — Parallel Review Panel:** Each idea is evaluated in parallel by 6 specialist critic agents. A Synthesis node aggregates scores, ranks ideas, and filters the top K above a configurable threshold.
 3. **Layer 3 — MVP Scope & GTM:** For each surviving idea, an MVP Architect and GTM Strategist run concurrently. A Business Plan Composer merges their outputs into a cohesive plan.
 4. **Layer 4 — Validation & Output:** A Devil's Advocate agent adversarially stress-tests each plan. A Report Generator produces the final deliverable with idea cards, scores, plans, and rebuttals.
 
@@ -78,9 +78,9 @@ This layer is responsible for scanning external sources, identifying market oppo
 
 | Agent | Responsibility | Inputs / Outputs | Tools / Model |
 |---|---|---|---|
-| **Research Agent** | Primary ideation. Performs web search, synthesizes trends, generates N candidate ideas with structured metadata. | In: research prompt, config · Out: `list[BusinessIdea]` | Tavily/Serper search, web scraper, LLM |
-| **Trend Scanner** | Sub-agent. Monitors HN, ProductHunt, Reddit, X for emerging patterns. Feeds real-time signals into Research Agent context. | In: keyword seeds · Out: `list[TrendSignal]` | RSS feeds, API scrapers, social listeners |
-| **Niche Validator** | Pre-filter. Checks search volume, identifies obvious incumbents, flags duplicates from prior runs. | In: `list[BusinessIdea]` · Out: `list[BusinessIdea]` (filtered) | Google Trends API, SimilarWeb, dedup cache |
+| **Research Agent** | Primary ideation. Performs web search, synthesizes trends, generates N candidate ideas with structured metadata. | In: research prompt, config · Out: `list[BusinessIdea]` | Tavily search, LLM |
+| **Trend Scanner** | Sub-agent. Monitors HN, ProductHunt, and Reddit for emerging patterns. Feeds real-time signals into Research Agent context. | In: keyword seeds · Out: `list[TrendSignal]` | Site-scoped Tavily search (HN, ProductHunt, Reddit), LLM |
+| **Niche Validator** | Pre-filter. Identifies obvious incumbents and removes duplicates from the candidate list. | In: `list[BusinessIdea]` · Out: `list[BusinessIdea]` (filtered) | LLM |
 
 ### 3.3 Layer 2 — Parallel Review Panel
 
@@ -88,11 +88,11 @@ Each idea from Layer 1 is evaluated concurrently by six specialist critic agents
 
 | Agent | Responsibility | Inputs / Outputs | Tools / Model |
 |---|---|---|---|
-| **Market Analyst** | Evaluates TAM/SAM/SOM, market growth trajectory, timing, and demand signals. | In: `BusinessIdea` · Out: `Review` (score 1–10, rationale) | Web search, market data APIs, LLM |
-| **Technical Feasibility** | Assesses whether a solo dev or small team can build an MVP in 4–8 weeks. Evaluates stack complexity, API dependencies, infra cost. | In: `BusinessIdea` · Out: `Review` (score 1–10, rationale) | GitHub trending, StackShare, LLM |
-| **Competitive Moat** | Analyzes defensibility: network effects, data moats, switching costs, regulatory barriers. Flags commodity risk. | In: `BusinessIdea` · Out: `Review` (score 1–10, rationale) | Crunchbase, patent search, LLM |
-| **Financial Viability** | Unit economics sanity check: estimated CAC, LTV, margin structure, path to ramen profitability. | In: `BusinessIdea` · Out: `Review` (score 1–10, rationale) | Pricing benchmarks, LLM |
-| **Risk Assessor** | Red-teams the idea: regulatory risk, single points of failure, ethical concerns, market timing risk. | In: `BusinessIdea` · Out: `Review` (score 1–10, rationale) | Regulatory databases, LLM |
+| **Market Analyst** | Evaluates TAM/SAM/SOM, market growth trajectory, timing, and demand signals. | In: `BusinessIdea` · Out: `Review` (score 1–10, rationale) | LLM |
+| **Technical Feasibility** | Assesses whether a solo dev or small team can build an MVP in 4–8 weeks. Evaluates stack complexity, API dependencies, infra cost. | In: `BusinessIdea` · Out: `Review` (score 1–10, rationale) | LLM |
+| **Competitive Moat** | Analyzes defensibility: network effects, data moats, switching costs, regulatory barriers. Flags commodity risk. | In: `BusinessIdea` · Out: `Review` (score 1–10, rationale) | LLM |
+| **Financial Viability** | Unit economics sanity check: estimated CAC, LTV, margin structure, path to ramen profitability. | In: `BusinessIdea` · Out: `Review` (score 1–10, rationale) | LLM |
+| **Risk Assessor** | Red-teams the idea: regulatory risk, single points of failure, ethical concerns, market timing risk. | In: `BusinessIdea` · Out: `Review` (score 1–10, rationale) | LLM |
 | **AI Disruption Analyst** | Evaluates resilience to AI replacement and commoditization: whether a foundation-model provider can replicate the core value, whether the idea builds on top of AI or competes against it, and how fast the AI frontier is moving in the domain. | In: `BusinessIdea` · Out: `Review` (score 1–10, rationale) | LLM |
 | **Review Synthesizer** | Fan-in node. Aggregates all reviewer scores using a weighted formula. Ranks ideas, drops those below threshold, passes top K to Layer 3. | In: `list[Review]` · Out: `top_ideas[]`, `scores[]` | Scoring algorithm (no LLM) |
 
@@ -102,9 +102,9 @@ For each idea that passed Layer 2's filter, two agents run concurrently (via `as
 
 | Agent | Responsibility | Inputs / Outputs | Tools / Model |
 |---|---|---|---|
-| **MVP Architect** | Defines core features (MoSCoW), tech stack recommendation, data model sketch, 4–8 week sprint plan, and estimated build cost. | In: `BusinessIdea` + `Reviews` · Out: `MVPPlan` | LLM, tech stack DB |
-| **GTM Strategist** | Defines ICP, positioning, channel strategy (SEO/community/paid), pricing model, launch sequence, first 100 customers playbook. | In: `BusinessIdea` + `Reviews` · Out: `GTMPlan` | LLM, pricing benchmarks |
-| **Business Plan Composer** | Merges MVP scope + GTM into a cohesive plan per idea. Adds executive summary, key assumptions, success metrics. | In: `MVPPlan` + `GTMPlan` · Out: `BusinessPlan` | LLM |
+| **MVP Architect** | Defines core features (MoSCoW), tech stack recommendation, data model sketch, 4–8 week sprint plan, and estimated build cost. | In: `BusinessIdea` + `Reviews` · Out: `MVPPlan` | LLM |
+| **GTM Strategist** | Defines ICP, positioning, channel strategy (SEO/community/paid), pricing model, launch sequence, first 100 customers playbook. | In: `BusinessIdea` + `Reviews` · Out: `GTMPlan` | LLM |
+| **Business Plan Composer** | Merges MVP scope + GTM into a cohesive plan per idea. Adds executive summary, key assumptions, success metrics. | In: `BusinessIdea` + `MVPPlan` + `GTMPlan` · Out: `BusinessPlan` | LLM |
 
 ### 3.5 Layer 4 — Validation & Output
 
@@ -127,15 +127,18 @@ The top-level state object that flows through the entire graph:
 
 | Field | Populated By | Description |
 |---|---|---|
+| `config: PipelineConfig` | Invocation | Configuration parameters passed at pipeline start |
+| `research_prompt: str` | Supervisor node | Current research prompt; updated on each retry with refinement suffix |
+| `iteration: int` | Orchestrator | Retry loop counter (max `config.max_retries`) |
 | `ideas: list[BusinessIdea]` | Layer 1 output | Candidate ideas with structured metadata |
 | `reviews: list[Review]` | Layer 2 intermediate | Flat list of all critic reviews (accumulated via `operator.add` reducer) |
 | `scores: dict[str, float]` | Layer 2 output | Weighted aggregate score per idea (0.0–1.0) |
 | `top_ideas: list[str]` | Layer 2 output | IDs of ideas passing the filter threshold |
 | `mvp_plans: dict[str, MVPPlan]` | Layer 3 output | MVP specification per surviving idea |
 | `gtm_plans: dict[str, GTMPlan]` | Layer 3 output | Go-to-market strategy per surviving idea |
+| `business_plans: dict[str, BusinessPlan]` | Layer 3 output | Combined MVP + GTM plan per surviving idea |
 | `rebuttals: dict[str, Rebuttal]` | Layer 4 intermediate | Devil's advocate challenges per plan |
 | `final_reports: list[Report]` | Layer 4 output | Formatted deliverable documents |
-| `iteration: int` | Orchestrator | Retry loop counter (max 2) |
 
 ### 4.2 Core Models
 
@@ -152,6 +155,7 @@ The top-level state object that flows through the entire graph:
 | `confidence` | `float (0–1)` | Research agent's self-assessed confidence |
 | `sources` | `list[str]` | URLs of supporting research |
 | `trend_signals` | `list[TrendSignal]` | Related trends from Trend Scanner |
+| `failure_reason` | `str \| None` | Populated on persistent LLM failure; downstream nodes handle gracefully |
 
 #### 4.2.2 Review
 
@@ -163,6 +167,7 @@ The top-level state object that flows through the entire graph:
 | `rationale` | `str` | Structured reasoning for the score |
 | `red_flags` | `list[str]` | Specific concerns or dealbreakers |
 | `confidence` | `float (0–1)` | Reviewer's self-assessed confidence |
+| `failure_reason` | `str \| None` | Populated on persistent LLM failure; downstream nodes handle gracefully |
 
 #### 4.2.3 MVPPlan
 
@@ -175,6 +180,7 @@ The top-level state object that flows through the entire graph:
 | `sprint_plan` | `list[Sprint]` | 4–8 week breakdown with deliverables per sprint |
 | `estimated_cost_usd` | `float` | Estimated total build cost (compute + APIs + labor) |
 | `complexity_rating` | `str (enum)` | low \| medium \| high |
+| `failure_reason` | `str \| None` | Populated on persistent LLM failure; downstream nodes handle gracefully |
 
 #### 4.2.4 GTMPlan
 
@@ -187,6 +193,7 @@ The top-level state object that flows through the entire graph:
 | `pricing_model` | `PricingModel` | Pricing structure and suggested tiers |
 | `launch_sequence` | `list[LaunchPhase]` | Phased launch plan with milestones |
 | `first_100_playbook` | `str` | Specific tactics to acquire first 100 customers |
+| `failure_reason` | `str \| None` | Populated on persistent LLM failure; downstream nodes handle gracefully |
 
 #### 4.2.5 Rebuttal
 
@@ -197,6 +204,19 @@ The top-level state object that flows through the entire graph:
 | `severity` | `str (enum)` | low \| medium \| high \| critical |
 | `suggested_mitigations` | `list[str]` | Recommended responses to each challenge |
 | `overall_survivability` | `float (0–1)` | Probability the plan survives real-world pressure |
+| `failure_reason` | `str \| None` | Populated on persistent LLM failure; downstream nodes handle gracefully |
+
+#### 4.2.6 BusinessPlan
+
+| Field | Type | Description |
+|---|---|---|
+| `idea_id` | `str` | Reference to the BusinessIdea |
+| `executive_summary` | `str` | High-level overview combining MVP scope and GTM strategy |
+| `key_assumptions` | `list[str]` | Critical assumptions the plan depends on |
+| `success_metrics` | `list[str]` | Measurable outcomes to track progress |
+| `mvp_plan` | `MVPPlan` | Full MVP specification (embedded) |
+| `gtm_plan` | `GTMPlan` | Full go-to-market strategy (embedded) |
+| `failure_reason` | `str \| None` | Populated on persistent LLM failure; downstream nodes handle gracefully |
 
 ---
 
@@ -209,10 +229,14 @@ Each layer is implemented as an independent LangGraph `StateGraph` (subgraph) wi
 The parent graph structure is:
 
 ```
-START → supervisor → research_subgraph → review_subgraph → planning_subgraph → output_subgraph → END
+START → supervisor → research → review → [should_retry] → planning → output → END
+                         ↑                     ↓
+                   supervisor ← increment_iteration   (retry path)
+                                               ↓
+                                          force_pass → planning   (retries exhausted)
 ```
 
-Conditional edge from `review_subgraph`: if `max(scores) < threshold` AND `iteration < max_retries`, route back to `research_subgraph` with incremented iteration counter.
+After the `review` node, a conditional edge routes to one of three targets based on whether ideas passed the threshold and whether retries remain (see §5.4 for details).
 
 ### 5.2 Fan-Out with Send()
 
@@ -221,13 +245,14 @@ Layer 2 uses LangGraph's `Send()` API to dynamically spawn parallel review tasks
 The fan-in is handled by the Review Synthesizer node, which has a conditional edge that only activates once all `Send()` tasks have completed (LangGraph manages this automatically via its internal task counter).
 
 ```python
-def route_to_reviewers(state: PipelineState) -> list[Send]:
+def route_to_reviewers(state: ReviewLayerState) -> list[Send]:
     sends = []
     for idea in state["ideas"]:
         for role in ReviewerRole:
             sends.append(Send("review_node", {
-                "idea": idea,
-                "reviewer_role": role,
+                **state,
+                "idea_to_review": idea,
+                "reviewer_role_to_use": role,
             }))
     return sends
 ```
@@ -237,30 +262,45 @@ def route_to_reviewers(state: PipelineState) -> list[Send]:
 Layer 3 uses a `Send()` fan-out to create one planning node per surviving idea. Inside each `plan_idea_node`, the MVP Architect and GTM Strategist are invoked concurrently using `asyncio.gather()`, keeping both calls within a single LangGraph node to avoid the write-conflict complexity of parallel branches. The Business Plan Composer then merges their outputs into a `BusinessPlan`.
 
 ```python
-async def plan_idea_node(state: PlanningNodeState) -> dict:
+async def plan_idea_node(state: PlanningLayerState) -> dict:
+    idea_id = state["idea_to_plan_id"]
+    idea = next(i for i in state["ideas"] if i.id == idea_id)
+    idea_reviews = [r for r in state["reviews"] if r.idea_id == idea_id]
+    config = state["config"]
+
+    mvp_architect = MVPArchitect(model_name=config.model_for("mvp_architect"))
+    gtm_strategist = GTMStrategist(model_name=config.model_for("gtm_strategist"))
+
     mvp_plan, gtm_plan = await asyncio.gather(
-        mvp_architect.invoke_mvp(idea, reviews),
-        gtm_strategist.invoke_gtm(idea, reviews),
+        mvp_architect.invoke_mvp(idea, idea_reviews),
+        gtm_strategist.invoke_gtm(idea, idea_reviews),
     )
+
+    composer = BusinessPlanComposer(model_name=config.model_for("business_plan_composer"))
     business_plan = await composer.invoke_plan(idea, mvp_plan, gtm_plan)
-    return {"mvp_plans": {idea.id: mvp_plan}, "gtm_plans": {idea.id: gtm_plan}, ...}
+
+    return {
+        "mvp_plans": {idea_id: mvp_plan},
+        "gtm_plans": {idea_id: gtm_plan},
+        "business_plans": {idea_id: business_plan},
+    }
 ```
 
 ### 5.4 Conditional Retry Edge
 
-After the Review Synthesizer runs, a conditional edge evaluates:
+After the Review Synthesizer runs, a `should_retry` function evaluates the state and returns one of three routing keys:
 
-- `len(top_ideas) == 0 AND iteration < 2`: route back to Layer 1's entry node with a refined prompt (appending "previous ideas were too generic, focus on underserved niches").
-- `len(top_ideas) == 0 AND iteration >= 2`: force-pass the top 3 by score regardless of threshold, log a warning.
-- `len(top_ideas) > 0`: proceed to Layer 3 normally.
+- `"planning"` — `top_ideas` is non-empty; proceed to Layer 3 normally.
+- `"retry"` — `top_ideas` is empty AND `iteration < config.max_retries`; route to `increment_iteration` → `supervisor` → Layer 1 with a refined prompt (appending "previous ideas were too generic, focus on underserved niches").
+- `"force_pass"` — `top_ideas` is empty AND retries are exhausted; route to `force_pass` node which selects the top `config.top_k` ideas by raw score regardless of threshold, then proceeds to Layer 3.
 
 ```python
 def should_retry(state: PipelineState) -> str:
-    if len(state["top_ideas"]) > 0:
-        return "planning_subgraph"
-    if state["iteration"] < 2:
-        return "research_subgraph"  # retry
-    return "planning_subgraph"  # force-pass best available
+    if state["top_ideas"]:
+        return "planning"
+    if state["iteration"] < state["config"].max_retries:
+        return "retry"
+    return "force_pass"
 ```
 
 ### 5.5 Structured Output Enforcement
@@ -318,6 +358,7 @@ All pipeline behavior is controlled via a `PipelineConfig` Pydantic model passed
 | `reviewer_weights` | `dict` | See §6.1 | Custom weights for the scoring formula |
 | `agent_models` | `dict[str, str]` | Per-agent defaults from `nexis/models.py` | Maps agent keys (e.g. `"research_agent"`, `"reviewer_market"`) to OpenRouter model IDs. All LLM calls are routed through OpenRouter — `OPENROUTER_API_KEY` must be set. |
 | `output_format` | `str` | `markdown` | Final report format: `markdown` \| `json` |
+| `checkpoint_db_path` | `str` | `./nexis_dev.db` | SQLite checkpoint database file path (passed to `SqliteSaver.from_conn_string()`) |
 
 ---
 
@@ -330,8 +371,8 @@ Every node emits structured JSON events via the `nexis.telemetry` logger. Each e
 ### 8.2 Error Handling Strategy
 
 - **LLM validation failure:** Retry with error context appended to prompt (max 2 retries). On persistent failure, write partial result with `failure_reason` field populated.
-- **Tool failure (search, API):** Retry with exponential backoff (1s, 4s, 16s). On persistent failure, agent proceeds with available data and logs a warning.
-- **Timeout:** Per-node timeout of 120 seconds. On timeout, the node is marked as failed and the pipeline continues with partial state.
+- **Tool failure (search, API):** Immediate first attempt, then exponential backoff (1s, 4s, 16s). On persistent failure, agent proceeds with available data and logs a warning.
+- **Timeout:** Per-LLM-call timeout of 120 seconds (enforced in `BaseAgent` via `asyncio.wait_for`). On timeout, the node is marked as failed and the pipeline continues with partial state.
 - **Full pipeline failure:** Checkpointed state allows manual resume from the last successful node. Failed runs are logged with full state snapshot for debugging.
 
 ---
@@ -343,12 +384,12 @@ Approximate per-run cost assuming 8 candidate ideas with 3 surviving to Layer 3 
 | Layer | LLM Calls | Est. Tokens | Est. Cost |
 |---|---|---|---|
 | Layer 1 (Research) | 3 agents | ~40K tokens | ~$0.30 |
-| Layer 2 (Review) | 8 × 5 + 1 = 41 calls | ~200K tokens | ~$1.50 |
+| Layer 2 (Review) | 8 × 6 + 1 = 49 calls | ~200K tokens | ~$1.50 |
 | Layer 3 (Planning) | 3 × 3 = 9 calls | ~60K tokens | ~$0.45 |
 | Layer 4 (Validation) | 3 + 1 = 4 calls | ~30K tokens | ~$0.25 |
-| **Total** | **~57 LLM calls** | **~330K tokens** | **~$2.50** |
+| **Total** | **~65 LLM calls** | **~370K tokens** | **~$2.80** |
 
-*Note: Costs are approximate based on March 2026 Anthropic API pricing. Actual costs vary with prompt complexity and retry frequency. Search tool costs (Tavily/Serper) are additional.*
+*Note: Costs are approximate based on March 2026 Anthropic API pricing. Actual costs vary with prompt complexity and retry frequency. Tavily search costs are additional.*
 
 ---
 
@@ -359,7 +400,7 @@ Approximate per-run cost assuming 8 candidate ideas with 3 surviving to Layer 3 
 | Orchestration | LangGraph 1.1+ (StateGraph, Send, subgraphs, checkpointing) |
 | LLM Provider | OpenRouter — all LLM calls route through `openrouter.ai/api/v1` (`OPENROUTER_API_KEY` required); per-agent model IDs defined in `nexis/models.py` |
 | Structured Output | LangChain `with_structured_output()` + Pydantic v2 models |
-| Web Search | Tavily Search API (primary), Serper API (fallback) |
+| Web Search | Tavily Search API |
 | Checkpointing | SqliteSaver via `langgraph-checkpoint-sqlite` |
 | Tracing | Structured logging via `nexis.telemetry`; LangSmith (opt-in via `LANGCHAIN_TRACING_V2`) |
 | Runtime | Python 3.11+, asyncio for parallel execution |
@@ -374,35 +415,48 @@ Approximate per-run cost assuming 8 candidate ideas with 3 surviving to Layer 3 
 
 ```
 nexis/
+├── docs/
+│   └── specification.md           # This document
 ├── pyproject.toml
 ├── .env.example
-├── src/
-│   ├── config.py              # PipelineConfig + settings
-│   ├── models.py              # Per-agent model assignments (single source of truth)
-│   ├── state.py               # PipelineState TypedDict + Pydantic models
-│   ├── graph.py               # Parent graph composition
+├── langgraph.json                 # LangGraph Platform deployment config
+├── src/nexis/
+│   ├── __init__.py                # run_pipeline / arun_pipeline public API
+│   ├── __main__.py                # CLI entry point (python -m nexis)
+│   ├── config.py                  # PipelineConfig settings
+│   ├── models.py                  # Per-agent model assignments (single source of truth)
+│   ├── state.py                   # PipelineState TypedDict + Pydantic models
+│   ├── graph.py                   # Parent graph (retry logic, supervisor, force-pass)
+│   ├── server.py                  # LangGraph Platform entry point
+│   ├── telemetry.py               # Structured logging for nodes and LLM calls
 │   ├── layers/
-│   │   ├── research.py        # Layer 1 subgraph + agents
-│   │   ├── review.py          # Layer 2 subgraph + critic agents
-│   │   ├── planning.py        # Layer 3 subgraph + planning agents
-│   │   └── output.py          # Layer 4 subgraph + report generator
+│   │   ├── research.py            # Layer 1: trend scanning + idea generation
+│   │   ├── review.py              # Layer 2: Send() fan-out to 6 critics
+│   │   ├── planning.py            # Layer 3: MVP + GTM concurrent planning
+│   │   └── output.py              # Layer 4: validation + report generation
 │   ├── agents/
-│   │   ├── base.py            # BaseAgent with retry, structured output; build_llm() routes via OpenRouter
-│   │   ├── research.py        # ResearchAgent, TrendScanner, NicheValidator
-│   │   ├── reviewers.py       # All 5 critic agents
-│   │   ├── planners.py        # MVPArchitect, GTMStrategist, Composer
-│   │   └── validators.py      # DevilsAdvocate, ReportGenerator
+│   │   ├── base.py                # BaseAgent (retry, structured output, timeout, OpenRouter)
+│   │   ├── research.py            # ResearchAgent, TrendScanner, NicheValidator
+│   │   ├── reviewers.py           # 6 critic agents + ReviewSynthesizer
+│   │   ├── planners.py            # MVPArchitect, GTMStrategist, BusinessPlanComposer
+│   │   └── validators.py          # DevilsAdvocate, ReportGenerator
 │   ├── tools/
-│   │   ├── search.py          # Tavily/Serper wrappers
-│   │   └── trends.py          # HN, ProductHunt, Reddit scrapers
+│   │   ├── search.py              # Tavily search wrapper with backoff
+│   │   └── trends.py              # Site-scoped trend scraper (HN, ProductHunt, Reddit)
 │   └── templates/
-│       ├── report.md.j2       # Markdown report template
-│       └── idea_card.md.j2    # Per-idea card template
+│       ├── report.md.j2           # Markdown report template
+│       └── idea_card.md.j2        # Per-idea card template
 ├── tests/
-│   ├── test_layers/           # Per-layer subgraph tests
-│   ├── test_agents/           # Per-agent unit tests
-│   └── test_integration.py    # Full pipeline integration test
-├── Dockerfile
+│   ├── conftest.py                # Shared fixtures
+│   ├── test_config.py             # PipelineConfig validation tests
+│   ├── test_state.py              # Pydantic model tests
+│   ├── test_cli.py                # CLI argument parsing tests
+│   ├── test_graph.py              # Parent graph routing and retry tests
+│   ├── test_telemetry.py          # Node instrumentation logging tests
+│   ├── test_agents/               # Per-agent unit tests (mocked LLM)
+│   ├── test_layers/               # Per-layer subgraph tests
+│   ├── test_tools/                # Search and trend tool tests
+│   └── test_integration.py        # Full pipeline smoke test (mocked + live)
 └── README.md
 ```
 
@@ -417,3 +471,4 @@ Potential enhancements for subsequent iterations:
 - **Competitive intelligence layer:** Add a dedicated agent between Layer 1 and Layer 2 that performs deep competitive analysis (Crunchbase funding data, app store rankings, SEO analysis) and enriches each idea with competitive landscape data.
 - **Automated validation:** After Layer 4, optionally trigger a Landing Page Generator agent that creates a simple validation page and a Distribution Agent that posts to relevant communities to test demand signal before any code is written.
 - **A2A protocol integration:** Expose each layer as an A2A-compatible agent, enabling external systems to invoke individual layers or swap in alternative implementations built with other frameworks.
+- **Tool enrichment:** Replace current LLM-only reviewer and validator agents with dedicated data-source integrations — e.g., market data APIs for the Market Analyst, Crunchbase for the Competitive Moat reviewer, regulatory databases for the Risk Assessor, and Google Trends / SimilarWeb for the Niche Validator. Add X/Twitter as an additional trend source alongside HN, ProductHunt, and Reddit.

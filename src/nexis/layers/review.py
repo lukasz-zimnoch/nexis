@@ -1,4 +1,4 @@
-"""Layer 2: Review Panel — Send() fan-out across N ideas × 5 critics."""
+"""Layer 2: Review Panel — Send() fan-out across N ideas × 6 critics."""
 
 from __future__ import annotations
 
