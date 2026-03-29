@@ -75,16 +75,9 @@ class ReviewerAgent(BaseAgent):
     async def invoke_review(self, idea: BusinessIdea) -> Review:
         """Invoke the reviewer for a given idea and return a Review."""
         review = await self.invoke({"idea": idea})
-        # Ensure the reviewer_role and idea_id are set correctly
         if review.failure_reason is None:
-            review = Review(
-                idea_id=idea.id,
-                reviewer_role=self.role,
-                score=review.score,
-                rationale=review.rationale,
-                red_flags=review.red_flags,
-                confidence=review.confidence,
-                failure_reason=review.failure_reason,
+            review = review.model_copy(
+                update={"idea_id": idea.id, "reviewer_role": self.role}
             )
         return review
 

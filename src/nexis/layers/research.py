@@ -7,22 +7,11 @@ import operator
 from typing import Annotated
 
 from langgraph.graph import END, START, StateGraph
-from typing_extensions import TypedDict
 
 from nexis.agents.research import NicheValidator, ResearchAgent, TrendScanner
 from nexis.config import PipelineConfig
 from nexis.telemetry import instrument_node
-from nexis.state import (
-    BusinessIdea,
-    BusinessPlan,
-    GTMPlan,
-    MVPPlan,
-    Rebuttal,
-    Report,
-    Review,
-    TrendSignal,
-    merge_dicts,
-)
+from nexis.state import BusinessIdea, PipelineState, TrendSignal
 
 logger = logging.getLogger(__name__)
 
@@ -37,21 +26,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-class ResearchLayerState(TypedDict):
-    # ---- PipelineState fields ----
-    config: PipelineConfig
-    research_prompt: str
-    iteration: int
-    ideas: Annotated[list[BusinessIdea], operator.add]
-    reviews: Annotated[list[Review], operator.add]
-    scores: Annotated[dict[str, float], merge_dicts]
-    top_ideas: list[str]
-    mvp_plans: Annotated[dict[str, MVPPlan], merge_dicts]
-    gtm_plans: Annotated[dict[str, GTMPlan], merge_dicts]
-    business_plans: Annotated[dict[str, BusinessPlan], merge_dicts]
-    rebuttals: Annotated[dict[str, Rebuttal], merge_dicts]
-    final_reports: Annotated[list[Report], operator.add]
-    # ---- Layer-local buffers ----
+class ResearchLayerState(PipelineState):
     trend_signals_buffer: Annotated[list[TrendSignal], operator.add]
     raw_ideas_buffer: Annotated[list[BusinessIdea], operator.add]
 

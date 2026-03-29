@@ -3,27 +3,14 @@
 from __future__ import annotations
 
 import logging
-import operator
-from typing import Annotated
 
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
-from typing_extensions import TypedDict
 
 from nexis.agents.reviewers import ReviewerAgent, ReviewSynthesizer, create_reviewer
 from nexis.config import PipelineConfig
 from nexis.telemetry import instrument_node
-from nexis.state import (
-    BusinessIdea,
-    BusinessPlan,
-    GTMPlan,
-    MVPPlan,
-    Rebuttal,
-    Report,
-    Review,
-    ReviewerRole,
-    merge_dicts,
-)
+from nexis.state import BusinessIdea, PipelineState, ReviewerRole
 
 logger = logging.getLogger(__name__)
 
@@ -33,39 +20,9 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-class ReviewLayerState(TypedDict):
-    """Full pipeline state extended with temporary per-task keys for Send()."""
+class ReviewNodeState(PipelineState):
+    """PipelineState extended with per-task fields injected by Send()."""
 
-    config: PipelineConfig
-    research_prompt: str
-    iteration: int
-    ideas: Annotated[list[BusinessIdea], operator.add]
-    reviews: Annotated[list[Review], operator.add]
-    scores: Annotated[dict[str, float], merge_dicts]
-    top_ideas: list[str]
-    mvp_plans: Annotated[dict[str, MVPPlan], merge_dicts]
-    gtm_plans: Annotated[dict[str, GTMPlan], merge_dicts]
-    business_plans: Annotated[dict[str, BusinessPlan], merge_dicts]
-    rebuttals: Annotated[dict[str, Rebuttal], merge_dicts]
-    final_reports: Annotated[list[Report], operator.add]
-
-
-class ReviewNodeState(TypedDict):
-    """State passed to each individual review_node task via Send()."""
-
-    config: PipelineConfig
-    research_prompt: str
-    iteration: int
-    ideas: Annotated[list[BusinessIdea], operator.add]
-    reviews: Annotated[list[Review], operator.add]
-    scores: Annotated[dict[str, float], merge_dicts]
-    top_ideas: list[str]
-    mvp_plans: Annotated[dict[str, MVPPlan], merge_dicts]
-    gtm_plans: Annotated[dict[str, GTMPlan], merge_dicts]
-    business_plans: Annotated[dict[str, BusinessPlan], merge_dicts]
-    rebuttals: Annotated[dict[str, Rebuttal], merge_dicts]
-    final_reports: Annotated[list[Report], operator.add]
-    # Per-task fields injected by Send()
     idea_to_review: BusinessIdea
     reviewer_role_to_use: ReviewerRole
 
@@ -75,7 +32,7 @@ class ReviewNodeState(TypedDict):
 # ---------------------------------------------------------------------------
 
 
-def route_to_reviewers(state: ReviewLayerState) -> list[Send]:
+def route_to_reviewers(state: PipelineState) -> list[Send]:
     """Fan-out: send each (idea, role) pair to review_node."""
     sends = []
     for idea in state["ideas"]:
@@ -116,7 +73,7 @@ async def review_node(state: ReviewNodeState) -> dict:
     return {"reviews": [review]}
 
 
-async def synthesize_node(state: ReviewLayerState) -> dict:
+async def synthesize_node(state: PipelineState) -> dict:
     """Synthesize all reviews into scores and a ranked top_ideas list."""
     synthesizer = ReviewSynthesizer()
     scores, top_ideas = synthesizer.synthesize(
@@ -139,7 +96,7 @@ async def synthesize_node(state: ReviewLayerState) -> dict:
 
 def build_review_subgraph():
     """Build and compile the Layer 2 review subgraph."""
-    builder = StateGraph(ReviewLayerState)
+    builder = StateGraph(PipelineState)
 
     builder.add_node("review_node", instrument_node(review_node, layer_id="review"))
     builder.add_node(

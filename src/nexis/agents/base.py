@@ -10,7 +10,7 @@ from typing import Any, TypeVar
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
 from nexis.telemetry import log_llm_call
 
@@ -133,7 +133,7 @@ class BaseAgent:
                 logger.error(
                     "%s timed out on attempt %d", self.__class__.__name__, attempt + 1
                 )
-            except (ValidationError, Exception) as exc:
+            except Exception as exc:
                 last_error = str(exc)
                 logger.error(
                     "%s error on attempt %d: %s",
@@ -177,7 +177,7 @@ class BaseAgent:
             if field_name == "failure_reason":
                 kwargs["failure_reason"] = reason
             elif not field_info.is_required():
-                pass  # use default
+                pass
             else:
                 # Provide minimal valid values for required fields
                 annotation = field_info.annotation

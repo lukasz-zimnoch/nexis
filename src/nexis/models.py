@@ -66,31 +66,22 @@ DEVILS_ADVOCATE = "anthropic/claude-opus-4-6"
 # Deep adversarial reasoning over a full business plan; needs full context + nuance.
 # Alt: openai/gpt-5.4
 
-# ── Role → model mapping (keyed by ReviewerRole string values) ───────────────
+# ── Canonical agent-key → model mapping (single source of truth) ─────────────
 
-REVIEWER_MODELS: dict[str, str] = {
-    "market": REVIEWER_MARKET,
-    "technical": REVIEWER_TECHNICAL,
-    "moat": REVIEWER_MOAT,
-    "financial": REVIEWER_FINANCIAL,
-    "risk": REVIEWER_RISK,
-    "ai_resilience": REVIEWER_AI_RESILIENCE,
+DEFAULT_AGENT_MODELS: dict[str, str] = {
+    "trend_scanner": TREND_SCANNER,
+    "research_agent": RESEARCH_AGENT,
+    "niche_validator": NICHE_VALIDATOR,
+    "reviewer_market": REVIEWER_MARKET,
+    "reviewer_technical": REVIEWER_TECHNICAL,
+    "reviewer_moat": REVIEWER_MOAT,
+    "reviewer_financial": REVIEWER_FINANCIAL,
+    "reviewer_risk": REVIEWER_RISK,
+    "reviewer_ai_resilience": REVIEWER_AI_RESILIENCE,
+    "mvp_architect": MVP_ARCHITECT,
+    "gtm_strategist": GTM_STRATEGIST,
+    "business_plan_composer": BUSINESS_PLAN_COMPOSER,
+    "devils_advocate": DEVILS_ADVOCATE,
 }
 
-AGENT_MODEL_KEYS = tuple(
-    [
-        "trend_scanner",
-        "research_agent",
-        "niche_validator",
-        "reviewer_market",
-        "reviewer_technical",
-        "reviewer_moat",
-        "reviewer_financial",
-        "reviewer_risk",
-        "reviewer_ai_resilience",
-        "mvp_architect",
-        "gtm_strategist",
-        "business_plan_composer",
-        "devils_advocate",
-    ]
-)
+AGENT_MODEL_KEYS = tuple(DEFAULT_AGENT_MODELS)

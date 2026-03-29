@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timezone
 
@@ -27,23 +28,28 @@ class TrendScraperTool:
         self, keywords: list[str], max_per_source: int = 3
     ) -> list[TrendSignal]:
         """Scrape trend signals for the given keyword seeds."""
-        signals: list[TrendSignal] = []
         keyword_str = " OR ".join(f'"{kw}"' for kw in keywords[:5])
 
-        for source_name, site_query in _TREND_SOURCES:
+        async def _scrape_source(
+            source_name: str, site_query: str
+        ) -> list[TrendSignal]:
             query = f"{site_query} {keyword_str}"
             try:
                 results = await self._search.search(query, max_results=max_per_source)
-                for r in results:
-                    signals.append(
-                        TrendSignal(
-                            source=source_name,
-                            signal=r.get("title", r.get("content", "")[:120]),
-                            url=r.get("url", ""),
-                            timestamp=datetime.now(tz=timezone.utc).isoformat(),
-                        )
+                return [
+                    TrendSignal(
+                        source=source_name,
+                        signal=r.get("title", r.get("content", "")[:120]),
+                        url=r.get("url", ""),
+                        timestamp=datetime.now(tz=timezone.utc).isoformat(),
                     )
+                    for r in results
+                ]
             except Exception as exc:
                 logger.warning("Failed to scrape %s: %s", source_name, exc)
+                return []
 
-        return signals
+        results = await asyncio.gather(
+            *[_scrape_source(name, query) for name, query in _TREND_SOURCES]
+        )
+        return [signal for source_signals in results for signal in source_signals]

@@ -19,7 +19,7 @@ class TavilySearchTool:
 
     async def search(self, query: str, max_results: int = 5) -> list[dict[str, Any]]:
         """Run a search query and return results."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         response = await loop.run_in_executor(
             None,
             lambda: self._client.search(query, max_results=max_results),
