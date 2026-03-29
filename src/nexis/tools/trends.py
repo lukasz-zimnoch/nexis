@@ -35,9 +35,7 @@ class TrendScraperTool:
         ) -> list[TrendSignal]:
             query = f"{site_query} {keyword_str}"
             try:
-                results = await self._search.search(
-                    query, max_results=max_per_source
-                )
+                results = await self._search.search(query, max_results=max_per_source)
                 return [
                     TrendSignal(
                         source=source_name,

@@ -23,7 +23,9 @@ class PipelineConfig(BaseSettings):
         "risk": 0.10,
         "ai_resilience": 0.10,
     }
-    agent_models: dict[str, str] = Field(default_factory=_models.DEFAULT_AGENT_MODELS.copy)
+    agent_models: dict[str, str] = Field(
+        default_factory=_models.DEFAULT_AGENT_MODELS.copy
+    )
     output_format: Literal["markdown", "json"] = "markdown"
     checkpoint_db_path: str = "./nexis_dev.db"
 
