@@ -6,33 +6,44 @@ on:
     branches: [master]
     types: [completed]
 
+env:
+  REGION: us-central1
+  IMAGE: ghcr.io/${{ github.repository }}:${{ github.event.workflow_run.head_sha }}
+
 jobs:
-  deploy-staging:
-    name: Deploy to staging
+  deploy:
+    name: Deploy to Cloud Run
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    environment: staging
+    permissions:
+      contents: read
+      id-token: write
     steps:
-      - uses: actions/checkout@v4
-      - name: Deploy to staging
-        # TODO: replace with actual deploy command for your target infrastructure
-        run: echo "Deploying ${{ github.sha }} to staging"
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
-          LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
 
-  deploy-production:
-    name: Deploy to production
-    runs-on: ubuntu-latest
-    needs: [deploy-staging]
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-      - name: Deploy to production
-        # TODO: replace with actual deploy command for your target infrastructure
-        run: echo "Deploying ${{ github.sha }} to production"
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
-          LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: nexis
+          image: ${{ env.IMAGE }}
+          region: ${{ env.REGION }}
+          env_vars: |-
+            OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
+            TAVILY_API_KEY=${{ secrets.TAVILY_API_KEY }}
+            LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }}
+            LANGCHAIN_TRACING_V2=false
+            LANGCHAIN_PROJECT=nexis
+          env_vars_update_strategy: overwrite
+          flags: >-
+            --port=8000
+            --memory=2Gi
+            --cpu=1
+            --timeout=600
+            --min-instances=0
+            --max-instances=1
+            --no-allow-unauthenticated
+            --iap
