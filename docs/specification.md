@@ -8,7 +8,7 @@
 | **Date** | March 2026 |
 | **Framework** | LangGraph (LangChain ecosystem) |
 | **Runtime** | Python 3.11+ |
-| **Status** | Draft |
+| **Status** | Implemented |
 
 ---
 
@@ -407,7 +407,7 @@ Approximate per-run cost assuming 8 candidate ideas with 3 surviving to Layer 3 
 | Package Management | uv |
 | Configuration | Pydantic Settings with `.env` file support |
 | Report Generation | Jinja2 templates (markdown + JSON output) |
-| Deployment | Docker container (uv-based), triggered via CLI, API endpoint, or cron |
+| Deployment | Google Cloud Run via GitHub Actions CI/CD; image built by `langgraph build`, pushed to GHCR; IAP for auth, scale-to-zero |
 
 ---
 
@@ -416,10 +416,17 @@ Approximate per-run cost assuming 8 candidate ideas with 3 surviving to Layer 3 
 ```
 nexis/
 ├── docs/
-│   └── specification.md           # This document
+│   ├── specification.md           # This document
+│   └── adr/                       # Architecture Decision Records (11 ADRs)
+├── scripts/
+│   └── setup-gcp.sh               # One-time GCP project + Workload Identity setup
+├── .github/workflows/
+│   ├── ci.yml                     # Lint → Test → Build → Push to GHCR
+│   └── deploy.yml                 # Deploy to Cloud Run on CI success
 ├── pyproject.toml
 ├── .env.example
 ├── langgraph.json                 # LangGraph Platform deployment config
+├── CLAUDE.md                      # Claude Code development instructions
 ├── src/nexis/
 │   ├── __init__.py                # run_pipeline / arun_pipeline public API
 │   ├── __main__.py                # CLI entry point (python -m nexis)
