@@ -65,7 +65,7 @@ uv run nexis --prompt "..." --model anthropic/claude-haiku-4-5
 
 ## Deployment
 
-[`docs/deployment.md`](docs/deployment.md) — Google Cloud Run setup, GitHub Actions CI/CD, required secrets, IAP access control, and cost estimates.
+[`docs/deployment.md`](docs/deployment.md) — Infrastructure setup, CI/CD pipeline, required secrets, access control, and cost estimates.
 
 ## Architecture Decision Records
 
