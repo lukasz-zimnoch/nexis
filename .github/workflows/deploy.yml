@@ -15,6 +15,7 @@ jobs:
     name: Deploy to Cloud Run
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    environment: production
     permissions:
       contents: read
       id-token: write
