@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# GCP one-time setup for Nexis Cloud Run deployment.
+#
+# Prerequisites:
+#   - gcloud CLI installed and logged in (gcloud auth login)
+#   - Billing account available (gcloud billing accounts list)
+#
+# Usage:
+#   export BILLING_ACCOUNT_ID=<your-billing-account-id>
+#   bash scripts/setup-gcp.sh
+
+set -euo pipefail
+
+PROJECT_ID="${PROJECT_ID:-nexis-pipeline}"
+REGION="${REGION:-us-central1}"
+REPO="${REPO:-lukasz-zimnoch/nexis}"
+BILLING_ACCOUNT_ID="${BILLING_ACCOUNT_ID:?Set BILLING_ACCOUNT_ID before running this script}"
+
+SA_EMAIL="nexis-deploy@${PROJECT_ID}.iam.gserviceaccount.com"
+
+echo "==> [1/6] Creating GCP project: ${PROJECT_ID}"
+if gcloud projects describe "${PROJECT_ID}" &>/dev/null; then
+  echo "    Project already exists, skipping creation."
+else
+  gcloud projects create "${PROJECT_ID}" --name="Nexis Pipeline"
+fi
+gcloud config set project "${PROJECT_ID}"
+
+echo "==> [2/6] Linking billing account"
+gcloud billing projects link "${PROJECT_ID}" --billing-account="${BILLING_ACCOUNT_ID}"
+
+echo "==> [3/6] Enabling required APIs"
+gcloud services enable \
+  run.googleapis.com \
+  secretmanager.googleapis.com \
+  iap.googleapis.com \
+  iam.googleapis.com \
+  iamcredentials.googleapis.com
+
+echo "==> [4/6] Creating deploy service account: ${SA_EMAIL}"
+if gcloud iam service-accounts describe "${SA_EMAIL}" &>/dev/null; then
+  echo "    Service account already exists, skipping creation."
+else
+  gcloud iam service-accounts create nexis-deploy \
+    --display-name="Nexis GitHub Actions Deploy"
+fi
+
+echo "    Granting roles/run.admin"
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/run.admin"
+
+echo "    Granting roles/iam.serviceAccountUser"
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/iam.serviceAccountUser"
+
+echo "==> [5/6] Setting up Workload Identity Federation for GitHub Actions"
+if gcloud iam workload-identity-pools describe github --location=global &>/dev/null; then
+  echo "    Pool 'github' already exists, skipping creation."
+else
+  gcloud iam workload-identity-pools create "github" \
+    --location="global" \
+    --display-name="GitHub Actions"
+fi
+
+if gcloud iam workload-identity-pools providers describe nexis-repo \
+     --location=global --workload-identity-pool=github &>/dev/null; then
+  echo "    Provider 'nexis-repo' already exists, skipping creation."
+else
+  gcloud iam workload-identity-pools providers create-oidc "nexis-repo" \
+    --location="global" \
+    --workload-identity-pool="github" \
+    --display-name="Nexis Repo" \
+    --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
+    --attribute-condition="assertion.repository=='${REPO}'" \
+    --issuer-uri="https://token.actions.githubusercontent.com"
+fi
+
+PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)')
+
+gcloud iam service-accounts add-iam-policy-binding "${SA_EMAIL}" \
+  --role="roles/iam.workloadIdentityUser" \
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github/attribute.repository/${REPO}"
+
+echo "==> [6/6] Setup complete. Add these secrets to your GitHub repository:"
+echo ""
+echo "    GCP_WIF_PROVIDER:"
+gcloud iam workload-identity-pools providers describe "nexis-repo" \
+  --location="global" \
+  --workload-identity-pool="github" \
+  --format="value(name)"
+echo ""
+echo "    GCP_SA_EMAIL: ${SA_EMAIL}"
+echo ""
+echo "Next steps:"
+echo "  1. Add the secrets above to GitHub (Settings → Secrets and variables → Actions)"
+echo "  2. Add OPENROUTER_API_KEY, TAVILY_API_KEY, LANGCHAIN_API_KEY secrets"
+echo "  3. Make the GHCR package public (Settings → Packages → nexis → Visibility → Public)"
+echo "  4. Push to master — the deploy workflow will create the Cloud Run service automatically"
+echo "  5. After first deploy, grant IAP access:"
+echo "     gcloud beta iap web add-iam-policy-binding \\"
+echo "       --resource-type=cloud-run --service=nexis --region=${REGION} \\"
+echo "       --member=\"user:your-email@example.com\" --role=\"roles/iap.httpsResourceAccessor\""
+echo "  6. Enable IAP via Cloud Console (Security → Identity-Aware Proxy) on first use"
