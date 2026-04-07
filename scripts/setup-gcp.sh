@@ -16,6 +16,10 @@ REGION="${REGION:-us-central1}"
 REPO="${REPO:-lukasz-zimnoch/nexis}"
 BILLING_ACCOUNT_ID="${BILLING_ACCOUNT_ID:?Set BILLING_ACCOUNT_ID before running this script}"
 
+# Override the ADC quota project (which may point to a different project)
+# so API quota is billed against the target project.
+export CLOUDSDK_BILLING_QUOTA_PROJECT="${PROJECT_ID}"
+
 SA_EMAIL="nexis-deploy@${PROJECT_ID}.iam.gserviceaccount.com"
 
 echo "==> [0/7] Environment diagnostics"
@@ -76,13 +80,26 @@ AR_REPO="ghcr-remote"
 if gcloud artifacts repositories describe "${AR_REPO}" --location="${REGION}" &>/dev/null; then
   echo "    Repository '${AR_REPO}' already exists, skipping creation."
 else
-  gcloud artifacts repositories create "${AR_REPO}" \
-    --repository-format=docker \
-    --location="${REGION}" \
-    --mode=remote-repository \
-    --remote-repo-config-desc="GHCR pull-through cache" \
-    --remote-docker-repo=https://ghcr.io \
-    --verbosity=debug || true
+  AR_CREATED=false
+  for attempt in 1 2 3 4 5; do
+    if gcloud artifacts repositories create "${AR_REPO}" \
+      --repository-format=docker \
+      --location="${REGION}" \
+      --mode=remote-repository \
+      --remote-repo-config-desc="GHCR pull-through cache" \
+      --remote-docker-repo=https://ghcr.io 2>&1; then
+      AR_CREATED=true
+      break
+    fi
+    backoff=$((30 * attempt))
+    echo "    Attempt ${attempt}/5 failed, retrying in ${backoff}s..."
+    sleep "${backoff}"
+  done
+  if [[ "${AR_CREATED}" != "true" ]]; then
+    echo "    ERROR: Could not create AR remote repository after 5 attempts."
+    echo "    Create it manually via the GCP Console and re-run this script."
+    exit 1
+  fi
 fi
 
 echo "==> [5/7] Creating deploy service account: ${SA_EMAIL}"
