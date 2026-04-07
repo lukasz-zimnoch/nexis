@@ -30,17 +30,28 @@ echo "==> [2/7] Linking billing account"
 gcloud billing projects link "${PROJECT_ID}" --billing-account="${BILLING_ACCOUNT_ID}"
 
 echo "==> [3/7] Enabling required APIs"
-gcloud services enable \
-  run.googleapis.com \
-  secretmanager.googleapis.com \
-  iap.googleapis.com \
-  iam.googleapis.com \
-  iamcredentials.googleapis.com \
+REQUIRED_APIS=(
+  run.googleapis.com
+  secretmanager.googleapis.com
+  iap.googleapis.com
+  iam.googleapis.com
+  iamcredentials.googleapis.com
   artifactregistry.googleapis.com
-
-# Brief pause to avoid hitting serviceconsumermanagement.googleapis.com
-# mutate quota after enabling APIs.
-sleep 60
+)
+ENABLED_APIS=$(gcloud services list --enabled --format='value(config.name)' --project="${PROJECT_ID}")
+APIS_TO_ENABLE=()
+for api in "${REQUIRED_APIS[@]}"; do
+  if ! echo "${ENABLED_APIS}" | grep -q "^${api}$"; then
+    APIS_TO_ENABLE+=("${api}")
+  fi
+done
+if [[ ${#APIS_TO_ENABLE[@]} -gt 0 ]]; then
+  gcloud services enable "${APIS_TO_ENABLE[@]}"
+  echo "    Waiting for API activation to propagate..."
+  sleep 60
+else
+  echo "    All required APIs already enabled, skipping."
+fi
 
 echo "==> [4/7] Creating Artifact Registry remote repository for GHCR"
 AR_REPO="ghcr-remote"
