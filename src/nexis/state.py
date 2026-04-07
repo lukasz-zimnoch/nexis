@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Annotated, Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing_extensions import TypedDict
 
 from nexis.config import PipelineConfig
@@ -134,6 +134,13 @@ class Review(BaseModel):
     red_flags: list[str] = Field(default_factory=list)
     confidence: float = Field(description="Confidence score between 0.0 and 1.0")
     failure_reason: str | None = None
+
+    @field_validator("score")
+    @classmethod
+    def _score_bounds(cls, v: int) -> int:
+        if not 1 <= v <= 10:
+            raise ValueError("score must be between 1 and 10")
+        return v
 
 
 class MVPPlan(BaseModel):
