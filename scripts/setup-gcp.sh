@@ -47,7 +47,6 @@ echo "==> [3/7] Enabling required APIs"
 REQUIRED_APIS=(
   run.googleapis.com
   secretmanager.googleapis.com
-  iap.googleapis.com
   iam.googleapis.com
   iamcredentials.googleapis.com
   artifactregistry.googleapis.com
@@ -160,8 +159,7 @@ echo "  1. Add the secrets above to GitHub (Settings → Secrets and variables �
 echo "  2. Add OPENROUTER_API_KEY, TAVILY_API_KEY, LANGCHAIN_API_KEY secrets"
 echo "  3. Make the GHCR package public (Settings → Packages → nexis → Visibility → Public)"
 echo "  4. Push to master — the deploy workflow will create the Cloud Run service automatically"
-echo "  5. After first deploy, grant IAP access:"
-echo "     gcloud beta iap web add-iam-policy-binding \\"
-echo "       --resource-type=cloud-run --service=nexis --region=${REGION} \\"
-echo "       --member=\"user:your-email@example.com\" --role=\"roles/iap.httpsResourceAccessor\""
-echo "  6. Enable IAP via Cloud Console (Security → Identity-Aware Proxy) on first use"
+echo "  5. After first deploy, grant invoker access:"
+echo "     gcloud run services add-iam-policy-binding nexis \\"
+echo "       --region=${REGION} \\"
+echo "       --member=\"user:your-email@example.com\" --role=\"roles/run.invoker\""

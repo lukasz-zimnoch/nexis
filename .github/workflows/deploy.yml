@@ -47,4 +47,3 @@ jobs:
             --min-instances=0
             --max-instances=1
             --no-allow-unauthenticated
-            --iap

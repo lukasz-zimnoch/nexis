@@ -22,7 +22,7 @@ prompted them, the alternatives considered, and the trade-offs accepted.
 | [0008](0008-conditional-retry-force-pass-fallback.md) | Conditional Retry with Force-Pass Fallback | Accepted | 2026-03-29 |
 | [0009](0009-structured-json-telemetry-and-langsmith.md) | Structured JSON Telemetry Alongside LangSmith | Accepted | 2026-03-29 |
 | [0010](0010-deterministic-weighted-scoring.md) | Deterministic Weighted Scoring Without LLM | Accepted | 2026-03-29 |
-| [0011](0011-cloud-run-scale-to-zero-iap-auth.md) | Cloud Run with Scale-to-Zero and IAP Auth | Accepted | 2026-03-30 |
+| [0011](0011-cloud-run-scale-to-zero-iam-auth.md) | Cloud Run with Scale-to-Zero and IAM Auth | Accepted | 2026-03-30 |
 
 ## How to Add a New ADR
 

@@ -1,6 +1,6 @@
 # Deployment
 
-Nexis deploys to [Google Cloud Run](https://cloud.google.com/run) on every push to `master` that passes CI. It uses IAP (Identity-Aware Proxy) for email-based access control and scales to zero when idle.
+Nexis deploys to [Google Cloud Run](https://cloud.google.com/run) on every push to `master` that passes CI. It uses Cloud Run's built-in IAM authentication (`--no-allow-unauthenticated`) for access control and scales to zero when idle.
 
 ## Container
 
@@ -38,18 +38,25 @@ Cloud Run pulls the image from GHCR at deploy time using GCP credentials, not a 
 
 > GitHub > Settings > Packages > nexis > Change visibility > Public
 
-## IAP access (after first deploy)
+## Granting access (after first deploy)
 
-After the first successful deploy, grant access to specific emails:
+Grant `roles/run.invoker` to users who need to call the endpoint:
 
 ```bash
-gcloud beta iap web add-iam-policy-binding \
-  --resource-type=cloud-run --service=nexis --region=us-central1 \
+gcloud run services add-iam-policy-binding nexis \
+  --region=us-central1 \
   --member="user:your-email@example.com" \
-  --role="roles/iap.httpsResourceAccessor"
+  --role="roles/run.invoker"
 ```
 
-Enable IAP for the first time via the Cloud Console (Security > Identity-Aware Proxy) to auto-generate the OAuth consent screen.
+Then invoke the service with a Google identity token:
+
+```bash
+curl -X POST $(gcloud run services describe nexis --region=us-central1 --format='value(status.url)')/run \
+  -H "Authorization: Bearer $(gcloud auth print-identity-token)" \
+  -H "Content-Type: application/json" \
+  -d '{"research_prompt": "your prompt here"}'
+```
 
 ## Cost
 

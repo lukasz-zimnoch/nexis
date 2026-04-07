@@ -1,4 +1,4 @@
-# ADR-0011: Cloud Run with Scale-to-Zero and IAP Auth
+# ADR-0011: Cloud Run with Scale-to-Zero and IAM Auth
 
 | Field | Value |
 |-------|-------|
@@ -32,10 +32,20 @@ We deploy to **Google Cloud Run** with:
 - `timeout=600s` (10-minute pipeline runs)
 - **Workload Identity Federation** for keyless GitHub Actions deployment (no
   long-lived service account key)
-- **Identity-Aware Proxy (IAP)** on the default `run.app` URL for email-gated
-  access without a load balancer
+- **Cloud Run IAM authentication** (`--no-allow-unauthenticated`) — only
+  principals with `roles/run.invoker` can call the service. Callers authenticate
+  with a Google identity token (`gcloud auth print-identity-token`).
 - Secrets (API keys) passed as environment variables via `--set-env-vars` in
   the deploy command; stored in GitHub Actions environment secrets
+
+### Why IAM instead of IAP
+
+Identity-Aware Proxy (IAP) was originally chosen for email-gated access on the
+default `run.app` URL. However, IAP on Cloud Run for personal (non-organization)
+GCP projects requires manual OAuth consent screen and credential setup that does
+not auto-provision correctly. Cloud Run's built-in IAM auth provides equivalent
+access control (`roles/run.invoker` per user) with simpler configuration and no
+OAuth client management.
 
 ## Considered Alternatives
 
@@ -53,7 +63,7 @@ Use AWS Lambda for serverless execution with API Gateway as the HTTP endpoint.
 - Container image size limit is 10 GB; LangGraph Platform images may approach
   this
 - API Gateway auth (Cognito) is significantly more complex to configure than
-  Cloud Run's IAP
+  Cloud Run's IAM auth
 
 ### Option B: GKE / EKS (Managed Kubernetes)
 
@@ -80,8 +90,8 @@ Deploy to [Fly.io](https://fly.io) using their Docker-native deployment.
 - No GCP lock-in
 
 **Cons**
-- No built-in IAP equivalent; email-based auth would require an additional
-  service (Cloudflare Access, Authelia) or custom middleware
+- No built-in equivalent to Cloud Run IAM auth; email-based auth would require
+  an additional service (Cloudflare Access, Authelia) or custom middleware
 - Workload Identity Federation (keyless CI/CD) is GCP-specific; Fly.io would
   require a stored deploy token
 - Less mature than Cloud Run for production workloads
@@ -123,14 +133,14 @@ Use Cloud Run Jobs instead of Cloud Run Services for batch execution.
 - True scale-to-zero: zero instances when idle; no idle cost
 - Workload Identity Federation eliminates long-lived service account keys from
   GitHub Actions secrets
-- IAP provides email-gated access with Google account authentication at no
-  additional cost, without deploying a load balancer
+- Cloud Run IAM auth provides per-user access control with standard Google
+  identity tokens at no additional cost
 
 ### Negative
 - Cold starts of ~5–10 seconds occur after the service scales to zero; for a
   10-minute pipeline run this is acceptable but noticeable
-- IAP requires all users to have Google accounts; access for non-Google users
-  would require a different auth mechanism
+- IAM auth requires all callers to have Google accounts and `roles/run.invoker`;
+  access for non-Google users would require a different auth mechanism
 - Secrets passed as environment variables are visible to principals with
   `roles/run.admin`; for a personal project this is acceptable, but a
   multi-tenant deployment would need Cloud Secret Manager
