@@ -22,6 +22,24 @@ export CLOUDSDK_BILLING_QUOTA_PROJECT="${PROJECT_ID}"
 
 SA_EMAIL="nexis-deploy@${PROJECT_ID}.iam.gserviceaccount.com"
 
+echo "==> [0/7] Environment diagnostics"
+echo "    PROJECT_ID: ${PROJECT_ID}"
+echo "    CLOUDSDK_BILLING_QUOTA_PROJECT: ${CLOUDSDK_BILLING_QUOTA_PROJECT:-<unset>}"
+echo "    gcloud active account: $(gcloud config get-value account 2>/dev/null)"
+echo "    gcloud active project: $(gcloud config get-value project 2>/dev/null)"
+echo "    gcloud billing/quota_project: $(gcloud config get-value billing/quota_project 2>/dev/null || echo '<unset>')"
+PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)' 2>/dev/null || echo '<unknown>')
+echo "    Target project number: ${PROJECT_NUMBER}"
+echo "    ADC quota project (from creds file):"
+ADC_FILE="${CLOUDSDK_CONFIG:-$HOME/.config/gcloud}/application_default_credentials.json"
+if [[ -f "${ADC_FILE}" ]]; then
+  echo "      file: ${ADC_FILE}"
+  echo "      quota_project_id: $(python3 -c "import json; print(json.load(open('${ADC_FILE}')).get('quota_project_id', '<not set>'))" 2>/dev/null || echo '<parse error>')"
+else
+  echo "      ADC file not found at ${ADC_FILE}"
+fi
+echo ""
+
 echo "==> [1/7] Creating GCP project: ${PROJECT_ID}"
 if gcloud projects describe "${PROJECT_ID}" &>/dev/null; then
   echo "    Project already exists, skipping creation."
@@ -67,7 +85,8 @@ else
     --location="${REGION}" \
     --mode=remote-repository \
     --remote-repo-config-desc="GHCR pull-through cache" \
-    --remote-docker-repo=https://ghcr.io
+    --remote-docker-repo=https://ghcr.io \
+    --verbosity=debug || true
 fi
 
 echo "==> [5/7] Creating deploy service account: ${SA_EMAIL}"
