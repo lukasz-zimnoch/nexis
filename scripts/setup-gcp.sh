@@ -16,10 +16,6 @@ REGION="${REGION:-us-central1}"
 REPO="${REPO:-lukasz-zimnoch/nexis}"
 BILLING_ACCOUNT_ID="${BILLING_ACCOUNT_ID:?Set BILLING_ACCOUNT_ID before running this script}"
 
-# Override ADC quota project so API calls bill against the target project,
-# not whatever quota project is baked into Application Default Credentials.
-export CLOUDSDK_BILLING_QUOTA_PROJECT="${PROJECT_ID}"
-
 SA_EMAIL="nexis-deploy@${PROJECT_ID}.iam.gserviceaccount.com"
 
 echo "==> [0/7] Environment diagnostics"
