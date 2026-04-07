@@ -33,7 +33,7 @@ class RunRequest(BaseModel):
     top_k: int = 3
     score_threshold: float = 0.55
     output_format: str = "markdown"
-    llm_timeout: int = 120
+    llm_timeout: int = 300
     fallback_model: str = "google/gemini-3-flash-preview"
 
 
