@@ -27,6 +27,8 @@ class PipelineConfig(BaseSettings):
         default_factory=_models.DEFAULT_AGENT_MODELS.copy
     )
     output_format: Literal["markdown", "json"] = "markdown"
+    llm_timeout: int = 120
+    fallback_model: str = "google/gemini-3-flash-preview"
     checkpoint_db_path: str = "./nexis_dev.db"
 
     @model_validator(mode="after")

@@ -13,7 +13,13 @@ logger = logging.getLogger(__name__)
 class MVPArchitect(BaseAgent):
     """Defines the minimum viable product for a business idea."""
 
-    def __init__(self, model_name: str, max_retries: int = 2) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        max_retries: int = 2,
+        timeout: int = 120,
+        fallback_model: str | None = None,
+    ) -> None:
         super().__init__(
             model_name=model_name,
             output_schema=MVPPlan,
@@ -23,6 +29,8 @@ class MVPArchitect(BaseAgent):
                 "tech stack, data model description, 4-8 week sprint plan, and estimated build cost."
             ),
             max_retries=max_retries,
+            timeout=timeout,
+            fallback_model=fallback_model,
         )
 
     async def invoke_mvp(self, idea: BusinessIdea, reviews: list[Review]) -> MVPPlan:
@@ -38,7 +46,13 @@ class MVPArchitect(BaseAgent):
 class GTMStrategist(BaseAgent):
     """Defines the go-to-market strategy for a business idea."""
 
-    def __init__(self, model_name: str, max_retries: int = 2) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        max_retries: int = 2,
+        timeout: int = 120,
+        fallback_model: str | None = None,
+    ) -> None:
         super().__init__(
             model_name=model_name,
             output_schema=GTMPlan,
@@ -49,6 +63,8 @@ class GTMStrategist(BaseAgent):
                 "customers playbook."
             ),
             max_retries=max_retries,
+            timeout=timeout,
+            fallback_model=fallback_model,
         )
 
     async def invoke_gtm(self, idea: BusinessIdea, reviews: list[Review]) -> GTMPlan:
@@ -64,7 +80,13 @@ class GTMStrategist(BaseAgent):
 class BusinessPlanComposer(BaseAgent):
     """Merges MVP and GTM plans into a cohesive business plan."""
 
-    def __init__(self, model_name: str, max_retries: int = 2) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        max_retries: int = 2,
+        timeout: int = 120,
+        fallback_model: str | None = None,
+    ) -> None:
         super().__init__(
             model_name=model_name,
             output_schema=BusinessPlan,
@@ -74,6 +96,8 @@ class BusinessPlanComposer(BaseAgent):
                 "success metrics."
             ),
             max_retries=max_retries,
+            timeout=timeout,
+            fallback_model=fallback_model,
         )
 
     async def invoke_plan(

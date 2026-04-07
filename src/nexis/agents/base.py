@@ -42,11 +42,17 @@ class BaseAgent:
         system_prompt: str,
         tools: list | None = None,
         max_retries: int = 2,
+        timeout: int = 120,
+        fallback_model: str | None = None,
     ) -> None:
         self.model_name = model_name
         self.output_schema = output_schema
         self.system_prompt = system_prompt
         self.max_retries = max_retries
+        self.timeout = timeout
+        self.fallback_model = fallback_model
+        self._tools = tools
+        self._switched_to_fallback = False
 
         llm = build_llm(model_name)
         if tools:
@@ -85,7 +91,7 @@ class BaseAgent:
                 t0 = time.perf_counter()
                 raw_result = await asyncio.wait_for(
                     self._llm.ainvoke(messages),
-                    timeout=120,
+                    timeout=self.timeout,
                 )
                 latency_ms = (time.perf_counter() - t0) * 1000
 
@@ -129,10 +135,11 @@ class BaseAgent:
                 )
                 return parsed  # type: ignore[return-value]
             except asyncio.TimeoutError:
-                last_error = "Request timed out after 120 seconds"
+                last_error = f"Request timed out after {self.timeout} seconds"
                 logger.error(
                     "%s timed out on attempt %d", self.__class__.__name__, attempt + 1
                 )
+                self._switch_to_fallback()
             except Exception as exc:
                 last_error = str(exc)
                 logger.error(
@@ -148,6 +155,25 @@ class BaseAgent:
             self.__class__.__name__,
         )
         return self._failure_result(last_error or "Unknown error")
+
+    def _switch_to_fallback(self) -> None:
+        """Switch to fallback model for remaining retries after a timeout."""
+        if self._switched_to_fallback or not self.fallback_model:
+            return
+        if self.fallback_model == self.model_name:
+            return
+        logger.warning(
+            "%s switching from %s to fallback model %s",
+            self.__class__.__name__,
+            self.model_name,
+            self.fallback_model,
+        )
+        self._switched_to_fallback = True
+        self.model_name = self.fallback_model
+        llm = build_llm(self.fallback_model)
+        if self._tools:
+            llm = llm.bind_tools(self._tools)
+        self._llm = llm.with_structured_output(self.output_schema, include_raw=True)
 
     def _format_input(self, input_data: dict[str, Any]) -> str:
         """Format input dict into a human message string."""

@@ -33,6 +33,8 @@ class RunRequest(BaseModel):
     top_k: int = 3
     score_threshold: float = 0.55
     output_format: str = "markdown"
+    llm_timeout: int = 120
+    fallback_model: str = "google/gemini-3-flash-preview"
 
 
 class RunResponse(BaseModel):
@@ -48,6 +50,8 @@ async def run(request: RunRequest) -> RunResponse:
         top_k=request.top_k,
         score_threshold=request.score_threshold,
         output_format=request.output_format,
+        llm_timeout=request.llm_timeout,
+        fallback_model=request.fallback_model,
     )
 
     pipeline = build_graph()  # defaults to MemorySaver
