@@ -18,7 +18,7 @@ BILLING_ACCOUNT_ID="${BILLING_ACCOUNT_ID:?Set BILLING_ACCOUNT_ID before running 
 
 SA_EMAIL="nexis-deploy@${PROJECT_ID}.iam.gserviceaccount.com"
 
-echo "==> [1/6] Creating GCP project: ${PROJECT_ID}"
+echo "==> [1/8] Creating GCP project: ${PROJECT_ID}"
 if gcloud projects describe "${PROJECT_ID}" &>/dev/null; then
   echo "    Project already exists, skipping creation."
 else
@@ -26,18 +26,32 @@ else
 fi
 gcloud config set project "${PROJECT_ID}"
 
-echo "==> [2/6] Linking billing account"
+echo "==> [2/8] Linking billing account"
 gcloud billing projects link "${PROJECT_ID}" --billing-account="${BILLING_ACCOUNT_ID}"
 
-echo "==> [3/6] Enabling required APIs"
+echo "==> [3/8] Enabling required APIs"
 gcloud services enable \
   run.googleapis.com \
   secretmanager.googleapis.com \
   iap.googleapis.com \
   iam.googleapis.com \
-  iamcredentials.googleapis.com
+  iamcredentials.googleapis.com \
+  artifactregistry.googleapis.com
 
-echo "==> [4/6] Creating deploy service account: ${SA_EMAIL}"
+echo "==> [4/8] Creating Artifact Registry remote repository for GHCR"
+AR_REPO="ghcr-remote"
+if gcloud artifacts repositories describe "${AR_REPO}" --location="${REGION}" &>/dev/null; then
+  echo "    Repository '${AR_REPO}' already exists, skipping creation."
+else
+  gcloud artifacts repositories create "${AR_REPO}" \
+    --repository-format=docker \
+    --location="${REGION}" \
+    --mode=remote-repository \
+    --remote-repo-config-desc="GHCR pull-through cache" \
+    --remote-docker-repo=https://ghcr.io
+fi
+
+echo "==> [6/8] Creating deploy service account: ${SA_EMAIL}"
 if gcloud iam service-accounts describe "${SA_EMAIL}" &>/dev/null; then
   echo "    Service account already exists, skipping creation."
 else
@@ -55,7 +69,12 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:${SA_EMAIL}" \
   --role="roles/iam.serviceAccountUser"
 
-echo "==> [5/6] Setting up Workload Identity Federation for GitHub Actions"
+echo "    Granting roles/artifactregistry.reader"
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/artifactregistry.reader"
+
+echo "==> [7/8] Setting up Workload Identity Federation for GitHub Actions"
 if gcloud iam workload-identity-pools describe github --location=global &>/dev/null; then
   echo "    Pool 'github' already exists, skipping creation."
 else
@@ -83,7 +102,7 @@ gcloud iam service-accounts add-iam-policy-binding "${SA_EMAIL}" \
   --role="roles/iam.workloadIdentityUser" \
   --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github/attribute.repository/${REPO}"
 
-echo "==> [6/6] Setup complete. Add these secrets to your GitHub repository:"
+echo "==> [8/8] Setup complete. Add these secrets to your GitHub repository:"
 echo ""
 echo "    GCP_WIF_PROVIDER:"
 gcloud iam workload-identity-pools providers describe "nexis-repo" \
