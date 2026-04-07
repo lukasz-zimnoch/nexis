@@ -89,9 +89,15 @@ class Channel(BaseModel):
     estimated_cost_usd: float | None = None
 
 
+class PricingTier(BaseModel):
+    name: str
+    price: str
+    description: str
+
+
 class PricingModel(BaseModel):
     strategy: str
-    tiers: list[dict[str, Any]]
+    tiers: list[PricingTier]
     notes: str
 
 

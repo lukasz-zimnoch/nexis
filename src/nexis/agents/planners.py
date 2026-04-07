@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 
+from pydantic import BaseModel
+
 from nexis.agents.base import BaseAgent
 from nexis.state import BusinessIdea, BusinessPlan, GTMPlan, MVPPlan, Review
 
@@ -61,13 +63,24 @@ class GTMStrategist(BaseAgent):
         return result  # type: ignore[return-value]
 
 
+class BusinessPlanSynthesis(BaseModel):
+    """Lightweight output schema for the composer — avoids duplicating the full
+    MVPPlan/GTMPlan schema tree which exceeds structured-output grammar limits."""
+
+    idea_id: str
+    executive_summary: str
+    key_assumptions: list[str]
+    success_metrics: list[str]
+    failure_reason: str | None = None
+
+
 class BusinessPlanComposer(BaseAgent):
     """Merges MVP and GTM plans into a cohesive business plan."""
 
     def __init__(self, model_name: str, max_retries: int = 2) -> None:
         super().__init__(
             model_name=model_name,
-            output_schema=BusinessPlan,
+            output_schema=BusinessPlanSynthesis,
             system_prompt=(
                 "You are a Business Plan Composer. Merge the MVP plan and GTM plan into a "
                 "cohesive business plan with an executive summary, key assumptions, and "
@@ -104,5 +117,14 @@ class BusinessPlanComposer(BaseAgent):
             "mvp_plan": mvp_plan,
             "gtm_plan": gtm_plan,
         }
-        result = await super().invoke(input_data)
-        return result  # type: ignore[return-value]
+        synthesis = await super().invoke(input_data)
+
+        return BusinessPlan(
+            idea_id=synthesis.idea_id,
+            executive_summary=synthesis.executive_summary,
+            key_assumptions=synthesis.key_assumptions,
+            success_metrics=synthesis.success_metrics,
+            mvp_plan=mvp_plan,
+            gtm_plan=gtm_plan,
+            failure_reason=synthesis.failure_reason,
+        )
