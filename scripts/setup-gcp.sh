@@ -25,7 +25,6 @@ else
   gcloud projects create "${PROJECT_ID}" --name="Nexis Pipeline"
 fi
 gcloud config set project "${PROJECT_ID}"
-gcloud config set billing/quota_project "${PROJECT_ID}"
 
 echo "==> [2/7] Linking billing account"
 gcloud billing projects link "${PROJECT_ID}" --billing-account="${BILLING_ACCOUNT_ID}"
@@ -64,7 +63,8 @@ else
     --location="${REGION}" \
     --mode=remote-repository \
     --remote-repo-config-desc="GHCR pull-through cache" \
-    --remote-docker-repo=https://ghcr.io
+    --remote-docker-repo=https://ghcr.io \
+    --billing-project="${PROJECT_ID}"
 fi
 
 echo "==> [5/7] Creating deploy service account: ${SA_EMAIL}"
