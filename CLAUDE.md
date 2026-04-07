@@ -10,7 +10,7 @@ See the [specification](docs/specification.md) for full architecture, data contr
 
 - `graph.py` — parent graph (retry logic, supervisor, force-pass)
 - `layers/` — four subgraphs: `research.py`, `review.py`, `planning.py`, `output.py`
-- `server.py` + `langgraph.json` — LangGraph Platform deployment entry point
+- `server.py` — FastAPI server for Cloud Run (`POST /run`, `GET /health`) and `langgraph dev` entrypoint
 
 ## Key conventions
 
@@ -22,7 +22,8 @@ See the [specification](docs/specification.md) for full architecture, data contr
 
 ## Checkpointer
 
-The pipeline uses `SqliteSaver` for checkpointing (set `CHECKPOINT_DB_PATH=./nexis_dev.db` in `.env`). `SqliteSaver.from_conn_string()` takes a file path, not a SQLAlchemy URL. Never hardcode connection strings.
+- **CLI** (`nexis` command): uses `SqliteSaver` for checkpointing (set `CHECKPOINT_DB_PATH=./nexis_dev.db` in `.env`). `SqliteSaver.from_conn_string()` takes a file path, not a SQLAlchemy URL. Never hardcode connection strings.
+- **Cloud Run** (`server.py`): uses `MemorySaver` (in-memory) — no external database needed. State is ephemeral per request.
 
 ## Deployment
 

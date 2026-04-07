@@ -2,6 +2,15 @@
 
 Nexis deploys to [Google Cloud Run](https://cloud.google.com/run) on every push to `master` that passes CI. It uses IAP (Identity-Aware Proxy) for email-based access control and scales to zero when idle.
 
+## Container
+
+CI builds a standard Docker image (see `Dockerfile`) that runs a FastAPI/Uvicorn server (`nexis.server:app`). The server exposes:
+
+- `POST /run` — run the full pipeline (accepts `RunRequest`, returns reports)
+- `GET /health` — health check
+
+The graph uses in-memory checkpointing (`MemorySaver`) for intra-run state. No external database is required. The `langgraph.json` file is retained for local development with `langgraph dev` but is not used in production.
+
 ## One-time GCP setup
 
 ```bash

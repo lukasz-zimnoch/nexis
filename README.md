@@ -59,6 +59,51 @@ To override all agents with a single model for quick testing:
 uv run nexis --prompt "..." --model anthropic/claude-haiku-4-5
 ```
 
+### HTTP API
+
+Start the server:
+
+```bash
+uv run uvicorn nexis.server:app --host 0.0.0.0 --port 8000
+```
+
+Run the pipeline:
+
+```bash
+curl -X POST http://localhost:8000/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "research_prompt": "B2B SaaS tools for small construction companies",
+    "num_ideas": 8,
+    "top_k": 3,
+    "score_threshold": 0.55,
+    "output_format": "markdown"
+  }'
+```
+
+The response contains the generated reports:
+
+```json
+{
+  "reports": [
+    {
+      "title": "...",
+      "generated_at": "2025-01-15T12:00:00Z",
+      "ideas_evaluated": 8,
+      "ideas_selected": 3,
+      "content": "...",
+      "format": "markdown"
+    }
+  ]
+}
+```
+
+Health check:
+
+```bash
+curl http://localhost:8000/health
+```
+
 ## Specification
 
 [`docs/specification.md`](docs/specification.md) — Full technical specification covering architecture, data contracts, scoring formula, configuration reference, project structure, technology stack, and implementation patterns.
