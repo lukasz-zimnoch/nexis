@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.egg-info/
+dist/
+.env
+nexis_dev.db
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.git/
+.github/
+.claude/
+tests/
+docs/
