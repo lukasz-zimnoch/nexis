@@ -30,8 +30,16 @@ def supervisor_node(state: PipelineState) -> dict:
         logger.info("Supervisor: starting pipeline (iteration 0)")
     else:
         logger.info("Supervisor: retry iteration %d", iteration)
+        existing_ideas = state.get("ideas", [])
+        previous_titles = [idea.title for idea in existing_ideas]
+        exclusion = ""
+        if previous_titles:
+            titles_list = "; ".join(previous_titles)
+            exclusion = f" Do NOT regenerate these previous ideas: [{titles_list}]."
         prompt = (
-            prompt + " (previous ideas were too generic, focus on underserved niches)"
+            prompt
+            + " (previous ideas were too generic, focus on underserved niches)"
+            + exclusion
         )
 
     return {
