@@ -25,6 +25,7 @@ else
   gcloud projects create "${PROJECT_ID}" --name="Nexis Pipeline"
 fi
 gcloud config set project "${PROJECT_ID}"
+gcloud config set billing/quota_project "${PROJECT_ID}"
 
 echo "==> [2/7] Linking billing account"
 gcloud billing projects link "${PROJECT_ID}" --billing-account="${BILLING_ACCOUNT_ID}"
