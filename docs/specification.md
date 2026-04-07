@@ -407,7 +407,7 @@ Approximate per-run cost assuming 8 candidate ideas with 3 surviving to Layer 3 
 | Package Management | uv |
 | Configuration | Pydantic Settings with `.env` file support |
 | Report Generation | Jinja2 templates (markdown + JSON output) |
-| Deployment | Google Cloud Run via GitHub Actions CI/CD; image built by `langgraph build`, pushed to GHCR; IAP for auth, scale-to-zero |
+| Deployment | Google Cloud Run via GitHub Actions CI/CD; image pushed to GHCR; Cloud Run IAM auth (`--no-allow-unauthenticated`), scale-to-zero |
 
 ---
 
