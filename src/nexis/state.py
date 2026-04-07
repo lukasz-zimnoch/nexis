@@ -180,7 +180,9 @@ class Rebuttal(BaseModel):
     challenges: list[Challenge]
     severity: Severity
     suggested_mitigations: list[str]
-    overall_survivability: float = Field(description="Survivability score between 0.0 and 1.0")
+    overall_survivability: float = Field(
+        description="Survivability score between 0.0 and 1.0"
+    )
     failure_reason: str | None = None
 
 
