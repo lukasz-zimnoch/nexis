@@ -357,3 +357,21 @@ def test_report_generator_handles_missing_mvp_and_gtm(
     assert "AI Code Reviewer" in report.content
     assert "MVP Plan" not in report.content
     assert "GTM Plan" not in report.content
+
+
+def test_report_generator_deduplicates_ideas(
+    sample_config: PipelineConfig,
+    sample_idea: BusinessIdea,
+):
+    """When ideas list contains duplicates (from retry accumulation), report deduplicates."""
+    # Simulate operator.add accumulation: same idea appears 3 times
+    state = _make_state(sample_config, sample_idea)
+    state["ideas"] = [sample_idea, sample_idea, sample_idea]
+
+    generator = ReportGenerator()
+    report = generator.generate(state)
+
+    assert report.ideas_evaluated == 1  # deduplicated count
+    assert report.ideas_selected == 1
+    # The idea title should appear only once in the selected ideas section
+    assert report.content.count(f"## {sample_idea.title}") == 1

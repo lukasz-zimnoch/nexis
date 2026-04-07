@@ -40,7 +40,13 @@ class NicheValidatorOutput(BaseModel):
 class ResearchAgent(BaseAgent):
     """Generates business ideas using web research and trend signals."""
 
-    def __init__(self, model_name: str, max_retries: int = 2) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        max_retries: int = 2,
+        timeout: int = 120,
+        fallback_model: str | None = None,
+    ) -> None:
         super().__init__(
             model_name=model_name,
             output_schema=ResearchOutput,
@@ -50,6 +56,8 @@ class ResearchAgent(BaseAgent):
                 "trend signals provided."
             ),
             max_retries=max_retries,
+            timeout=timeout,
+            fallback_model=fallback_model,
         )
         self._search = SearchTool()
 
@@ -80,7 +88,13 @@ class ResearchAgent(BaseAgent):
 class TrendScanner(BaseAgent):
     """Extracts trend signals from web sources."""
 
-    def __init__(self, model_name: str, max_retries: int = 2) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        max_retries: int = 2,
+        timeout: int = 120,
+        fallback_model: str | None = None,
+    ) -> None:
         super().__init__(
             model_name=model_name,
             output_schema=TrendScannerOutput,
@@ -89,6 +103,8 @@ class TrendScanner(BaseAgent):
                 "extract meaningful trend signals relevant to the research domain."
             ),
             max_retries=max_retries,
+            timeout=timeout,
+            fallback_model=fallback_model,
         )
         self._scraper = TrendScraperTool()
 
@@ -111,7 +127,13 @@ class TrendScanner(BaseAgent):
 class NicheValidator(BaseAgent):
     """Filters ideas by removing duplicates and ideas with large incumbents."""
 
-    def __init__(self, model_name: str, max_retries: int = 2) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        max_retries: int = 2,
+        timeout: int = 120,
+        fallback_model: str | None = None,
+    ) -> None:
         super().__init__(
             model_name=model_name,
             output_schema=NicheValidatorOutput,
@@ -121,6 +143,8 @@ class NicheValidator(BaseAgent):
                 "etc.) that would make it nearly impossible for a small team to compete."
             ),
             max_retries=max_retries,
+            timeout=timeout,
+            fallback_model=fallback_model,
         )
 
     async def invoke(  # type: ignore[override]

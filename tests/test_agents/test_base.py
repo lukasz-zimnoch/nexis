@@ -169,3 +169,46 @@ async def test_token_usage_logged(mock_llm, caplog):
     assert event["total_tokens"] == 150
     assert event["success"] is True
     assert event["attempt"] == 1
+
+
+@pytest.mark.asyncio
+async def test_fallback_model_used_after_timeout(mock_llm):
+    """After a timeout, BaseAgent should switch to the fallback model for retries."""
+    good = SimpleOutput(answer="OK", score=5)
+
+    call_count = 0
+
+    async def timeout_then_succeed(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise asyncio.TimeoutError()
+        return _wrap(good)
+
+    mock_llm.ainvoke = timeout_then_succeed
+
+    with patch("nexis.agents.base.build_llm") as mock_build:
+        # Make build_llm return a new mock chain for the fallback
+        fallback_chain = MagicMock()
+        fallback_chain.with_structured_output.return_value = mock_llm
+        mock_build.return_value = fallback_chain
+
+        agent = BaseAgent(
+            model_name="slow/model",
+            output_schema=SimpleOutput,
+            system_prompt="test",
+            max_retries=2,
+            timeout=120,
+            fallback_model="fast/fallback",
+        )
+        # Override _llm to use our mock (build_llm was already called in __init__)
+        agent._llm = mock_llm
+
+        result = await agent.invoke({"q": "test"})
+
+    assert result.answer == "OK"
+    assert result.failure_reason is None
+    # build_llm should have been called for the fallback
+    mock_build.assert_called_with("fast/fallback")
+    assert agent.model_name == "fast/fallback"
+    assert agent._switched_to_fallback is True

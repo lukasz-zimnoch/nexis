@@ -227,3 +227,66 @@ async def test_research_layer_niche_validator_receives_raw_ideas(sample_config):
         passed_ideas = call_kwargs.args[1]
     assert passed_ideas is not None
     assert len(passed_ideas) == 2
+
+
+@pytest.mark.asyncio
+async def test_research_layer_truncates_to_num_ideas(sample_config):
+    """NicheValidator output is truncated to config.num_ideas."""
+    # sample_config has num_ideas=4; generate 6 ideas, expect 4 after truncation
+    many_ideas = [make_business_idea(f"Idea {i}") for i in range(6)]
+    trend_output = TrendScannerOutput(signals=[])
+    research_output = ResearchOutput(ideas=many_ideas)
+    niche_output = NicheValidatorOutput(ideas=many_ideas)
+
+    with (
+        patch(
+            "nexis.agents.research.TrendScanner.invoke",
+            new=AsyncMock(return_value=trend_output),
+        ),
+        patch(
+            "nexis.agents.research.ResearchAgent.invoke",
+            new=AsyncMock(return_value=research_output),
+        ),
+        patch(
+            "nexis.agents.research.NicheValidator.invoke",
+            new=AsyncMock(return_value=niche_output),
+        ),
+        patch("nexis.agents.base.ChatOpenAI"),
+    ):
+        graph = build_research_subgraph()
+        state = await graph.ainvoke(make_initial_state(sample_config))
+
+    assert len(state["ideas"]) == sample_config.num_ideas  # 4
+
+
+@pytest.mark.asyncio
+async def test_research_layer_tags_ideas_with_iteration(sample_config):
+    """Ideas from niche_validator_node should be tagged with the current iteration."""
+    ideas = [make_business_idea("Tagged Idea")]
+    trend_output = TrendScannerOutput(signals=[])
+    research_output = ResearchOutput(ideas=ideas)
+    niche_output = NicheValidatorOutput(ideas=ideas)
+
+    initial_state = make_initial_state(sample_config)
+    initial_state["iteration"] = 2  # simulate retry iteration
+
+    with (
+        patch(
+            "nexis.agents.research.TrendScanner.invoke",
+            new=AsyncMock(return_value=trend_output),
+        ),
+        patch(
+            "nexis.agents.research.ResearchAgent.invoke",
+            new=AsyncMock(return_value=research_output),
+        ),
+        patch(
+            "nexis.agents.research.NicheValidator.invoke",
+            new=AsyncMock(return_value=niche_output),
+        ),
+        patch("nexis.agents.base.ChatOpenAI"),
+    ):
+        graph = build_research_subgraph()
+        state = await graph.ainvoke(initial_state)
+
+    assert len(state["ideas"]) == 1
+    assert state["ideas"][0].iteration == 2

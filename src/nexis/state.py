@@ -129,6 +129,7 @@ class BusinessIdea(BaseModel):
     confidence: float = Field(description="Confidence score between 0.0 and 1.0")
     sources: list[str] = Field(default_factory=list)
     trend_signals: list[TrendSignal] = Field(default_factory=list)
+    iteration: int = 0
     failure_reason: str | None = None
 
 

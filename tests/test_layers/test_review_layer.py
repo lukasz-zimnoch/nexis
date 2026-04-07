@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from nexis.config import PipelineConfig
-from nexis.layers.review import build_review_subgraph
+from nexis.layers.review import build_review_subgraph, route_to_reviewers
 from nexis.state import BusinessIdea, Review, ReviewerRole
 
 
@@ -235,3 +235,50 @@ async def test_review_layer_handles_failed_reviews(config, three_ideas):
     # Scores still present for all ideas
     for idea in three_ideas:
         assert idea.id in result["scores"]
+
+
+def test_route_to_reviewers_filters_by_current_iteration(config):
+    """Only ideas from the current iteration should be fanned out to reviewers."""
+    iter0_idea = BusinessIdea(
+        id="old-idea",
+        title="Old Idea",
+        problem_statement="P",
+        target_market="M",
+        revenue_model="SaaS",
+        confidence=0.8,
+        iteration=0,
+    )
+    iter1_ideas = [
+        BusinessIdea(
+            id=f"new-idea-{i}",
+            title=f"New Idea {i}",
+            problem_statement="P",
+            target_market="M",
+            revenue_model="SaaS",
+            confidence=0.8,
+            iteration=1,
+        )
+        for i in range(2)
+    ]
+    state = {
+        "config": config,
+        "research_prompt": config.research_prompt,
+        "iteration": 1,
+        "ideas": [iter0_idea] + iter1_ideas,
+        "reviews": [],
+        "scores": {},
+        "top_ideas": [],
+        "mvp_plans": {},
+        "gtm_plans": {},
+        "business_plans": {},
+        "rebuttals": {},
+        "final_reports": [],
+    }
+
+    sends = route_to_reviewers(state)
+
+    # 2 current-iteration ideas × 6 roles = 12 sends (not 18)
+    assert len(sends) == 12
+    # All sends should be for new ideas only
+    for send in sends:
+        assert send.arg["idea_to_review"].iteration == 1

@@ -30,7 +30,10 @@ async def devils_advocate_node(state: PipelineState) -> dict:
         return {"rebuttals": {}}
 
     advocate = DevilsAdvocate(
-        model_name=config.model_for("devils_advocate"), max_retries=config.max_retries
+        model_name=config.model_for("devils_advocate"),
+        max_retries=config.max_retries,
+        timeout=config.llm_timeout,
+        fallback_model=config.fallback_model,
     )
 
     plans = [

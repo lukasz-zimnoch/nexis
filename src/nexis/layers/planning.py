@@ -53,10 +53,16 @@ async def plan_idea_node(state: PlanningNodeState) -> dict:
     logger.info("Planning idea %s (%s)", idea_id, idea.title)
 
     mvp_architect = MVPArchitect(
-        model_name=config.model_for("mvp_architect"), max_retries=config.max_retries
+        model_name=config.model_for("mvp_architect"),
+        max_retries=config.max_retries,
+        timeout=config.llm_timeout,
+        fallback_model=config.fallback_model,
     )
     gtm_strategist = GTMStrategist(
-        model_name=config.model_for("gtm_strategist"), max_retries=config.max_retries
+        model_name=config.model_for("gtm_strategist"),
+        max_retries=config.max_retries,
+        timeout=config.llm_timeout,
+        fallback_model=config.fallback_model,
     )
 
     mvp, gtm = await asyncio.gather(
@@ -67,6 +73,8 @@ async def plan_idea_node(state: PlanningNodeState) -> dict:
     composer = BusinessPlanComposer(
         model_name=config.model_for("business_plan_composer"),
         max_retries=config.max_retries,
+        timeout=config.llm_timeout,
+        fallback_model=config.fallback_model,
     )
     plan = await composer.invoke_plan(idea, mvp, gtm)
 
