@@ -196,6 +196,7 @@ class BaseAgent:
 
 def _minimal_value(annotation: Any) -> Any:
     """Return a minimal valid value for the given type annotation."""
+    import enum
 
     origin = getattr(annotation, "__origin__", None)
     if annotation is list or origin is list:
@@ -205,11 +206,25 @@ def _minimal_value(annotation: Any) -> Any:
     if annotation is str or annotation == "str":
         return ""
     if annotation is int or annotation == "int":
-        return 0
+        return 1
     if annotation is float or annotation == "float":
         return 0.0
     if annotation is bool or annotation == "bool":
         return False
+    # Enum types — return the first member
+    if isinstance(annotation, type) and issubclass(annotation, enum.Enum):
+        members = list(annotation)
+        return members[0] if members else None
+    # Pydantic BaseModel subclasses — construct with minimal values
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        kwargs: dict[str, Any] = {}
+        for fn, fi in annotation.model_fields.items():
+            if fi.is_required():
+                kwargs[fn] = _minimal_value(fi.annotation)
+        try:
+            return annotation(**kwargs)
+        except Exception:
+            return None
     # For Union/Optional types — pick first non-None arg
     if origin is type(None):
         return None

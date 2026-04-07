@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Any
+from typing import Annotated
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator
@@ -89,9 +89,15 @@ class Channel(BaseModel):
     estimated_cost_usd: float | None = None
 
 
+class PricingTier(BaseModel):
+    name: str
+    price: str
+    description: str
+
+
 class PricingModel(BaseModel):
     strategy: str
-    tiers: list[dict[str, Any]]
+    tiers: list[PricingTier]
     notes: str
 
 

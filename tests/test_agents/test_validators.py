@@ -115,7 +115,7 @@ def sample_gtm(sample_idea: BusinessIdea) -> GTMPlan:
         ],
         pricing_model=PricingModel(
             strategy="per-seat",
-            tiers=[{"name": "starter", "price": 29, "seats": 5}],
+            tiers=[{"name": "starter", "price": "29", "description": "Up to 5 seats"}],
             notes="Annual discount available",
         ),
         launch_sequence=[
@@ -223,8 +223,9 @@ async def test_devils_advocate_failure_raises(
     from nexis.agents.validators import DevilsAdvocate
 
     advocate = DevilsAdvocate(model_name="claude-sonnet-4-6", max_retries=0)
-    with pytest.raises(RuntimeError, match="LLM unavailable"):
-        await advocate.invoke_rebuttal(sample_business_plan)
+    result = await advocate.invoke_rebuttal(sample_business_plan)
+    assert result.failure_reason is not None
+    assert "LLM unavailable" in result.failure_reason
 
 
 # ---------------------------------------------------------------------------

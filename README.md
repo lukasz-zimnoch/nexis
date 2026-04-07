@@ -56,7 +56,7 @@ uv run nexis --prompt "B2B SaaS tools for small construction companies"
 To override all agents with a single model for quick testing:
 
 ```bash
-uv run nexis --prompt "..." --model anthropic/claude-haiku-4-5
+uv run nexis --prompt "..." --model anthropic/claude-haiku-4.5
 ```
 
 ### HTTP API

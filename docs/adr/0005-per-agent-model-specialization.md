@@ -34,24 +34,24 @@ code changes. The default assignments are:
 | Agent | Model | Rationale |
 |-------|-------|-----------|
 | `trend_scanner` | `google/gemini-3-flash-preview` | Fast extraction from long web context |
-| `research_agent` | `anthropic/claude-opus-4-6` | Highest-leverage creative synthesis node |
-| `niche_validator` | `anthropic/claude-haiku-4-5` | Simple binary classification |
-| `reviewer_market` | `openai/gpt-5.3-instant` | Quantitative TAM/SAM/SOM reasoning |
-| `reviewer_technical` | `anthropic/claude-sonnet-4-6` | Software engineering feasibility |
-| `reviewer_moat` | `anthropic/claude-sonnet-4-6` | Strategic qualitative reasoning |
-| `reviewer_financial` | `openai/gpt-5.3-instant` | Unit economics and margin structure |
-| `reviewer_risk` | `anthropic/claude-sonnet-4-6` | Adversarial red-teaming |
-| `reviewer_ai_resilience` | `anthropic/claude-sonnet-4-6` | AI ecosystem awareness |
-| `mvp_architect` | `anthropic/claude-opus-4-6` | Complex nested structured output |
+| `research_agent` | `anthropic/claude-opus-4.6` | Highest-leverage creative synthesis node |
+| `niche_validator` | `anthropic/claude-haiku-4.5` | Simple binary classification |
+| `reviewer_market` | `openai/gpt-5.4-mini` | Quantitative TAM/SAM/SOM reasoning |
+| `reviewer_technical` | `anthropic/claude-sonnet-4.6` | Software engineering feasibility |
+| `reviewer_moat` | `anthropic/claude-sonnet-4.6` | Strategic qualitative reasoning |
+| `reviewer_financial` | `openai/gpt-5.4-mini` | Unit economics and margin structure |
+| `reviewer_risk` | `anthropic/claude-sonnet-4.6` | Adversarial red-teaming |
+| `reviewer_ai_resilience` | `anthropic/claude-sonnet-4.6` | AI ecosystem awareness |
+| `mvp_architect` | `anthropic/claude-opus-4.6` | Complex nested structured output |
 | `gtm_strategist` | `openai/gpt-5.4` | Marketing domain; channel and ICP strategy |
-| `business_plan_composer` | `anthropic/claude-opus-4-6` | Long-form coherent synthesis |
-| `devils_advocate` | `anthropic/claude-opus-4-6` | Deep adversarial reasoning |
+| `business_plan_composer` | `anthropic/claude-opus-4.6` | Long-form coherent synthesis |
+| `devils_advocate` | `anthropic/claude-opus-4.6` | Deep adversarial reasoning |
 
 ## Considered Alternatives
 
 ### Option A: Single Model for All Agents
 
-Use one model (e.g., `anthropic/claude-opus-4-6`) for all 13 agents.
+Use one model (e.g., `anthropic/claude-opus-4.6`) for all 13 agents.
 
 **Pros**
 - No configuration complexity; one API key, one model version to track
@@ -108,7 +108,7 @@ task description.
   availability before assigning a new model
 
 ### Trade-offs
-- Coupling to specific model versions (e.g., `gpt-5.3-instant` vs. `gpt-5.4`)
+- Coupling to specific model versions (e.g., `gpt-5.4-mini` vs. `gpt-5.4`)
   creates drift risk as providers deprecate older versions. This is mitigated by
   centralizing all assignments in one file and documenting alternatives in inline
   comments.

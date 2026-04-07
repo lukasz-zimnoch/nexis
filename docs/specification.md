@@ -307,6 +307,8 @@ def should_retry(state: PipelineState) -> str:
 
 All LLM-backed agents use LangChain's `with_structured_output()` to bind Pydantic models to the LLM call. If the LLM returns output that fails validation, the framework automatically retries with the validation error appended to the prompt (up to 2 retries). On persistent failure, the agent writes a partial result with a `failure_reason` field that downstream nodes can handle gracefully.
 
+**Schema complexity constraint:** Some LLM providers reject deeply nested JSON schemas that compile to large grammars. The `BusinessPlanComposer` works around this by using a lightweight `BusinessPlanSynthesis` output schema (containing only the composer-generated fields: `executive_summary`, `key_assumptions`, `success_metrics`) and assembling the full `BusinessPlan` (with embedded `MVPPlan` and `GTMPlan`) in application code. This avoids sending the entire nested schema tree through the structured output grammar compiler.
+
 ### 5.6 Checkpointing and Persistence
 
 The graph uses an `SqliteSaver` checkpointer. This enables full state persistence at every node transition, allowing the pipeline to be resumed from any point after a crash, and providing a complete audit trail for debugging and analysis.
