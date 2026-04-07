@@ -38,6 +38,10 @@ gcloud services enable \
   iamcredentials.googleapis.com \
   artifactregistry.googleapis.com
 
+# Brief pause to avoid hitting serviceconsumermanagement.googleapis.com
+# mutate quota after enabling APIs.
+sleep 60
+
 echo "==> [4/7] Creating Artifact Registry remote repository for GHCR"
 AR_REPO="ghcr-remote"
 if gcloud artifacts repositories describe "${AR_REPO}" --location="${REGION}" &>/dev/null; then
