@@ -8,7 +8,7 @@ See https://openrouter.ai/models for available IDs.
 
 # ── Layer 1: Research ────────────────────────────────────────────────────────
 
-TREND_SCANNER = "google/gemini-3-flash"
+TREND_SCANNER = "google/gemini-3-flash-preview"
 # Pro-level extraction at Flash speed; strong on long noisy web context.
 # Alt: anthropic/claude-sonnet-4-6 (more reliable structured output)
 

@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Annotated, Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing_extensions import TypedDict
 
 from nexis.config import PipelineConfig
@@ -120,7 +120,7 @@ class BusinessIdea(BaseModel):
     target_market: str
     revenue_model: str
     estimated_tam: str | None = None
-    confidence: float = Field(ge=0.0, le=1.0)
+    confidence: float = Field(description="Confidence score between 0.0 and 1.0")
     sources: list[str] = Field(default_factory=list)
     trend_signals: list[TrendSignal] = Field(default_factory=list)
     failure_reason: str | None = None
@@ -129,11 +129,18 @@ class BusinessIdea(BaseModel):
 class Review(BaseModel):
     idea_id: str
     reviewer_role: ReviewerRole
-    score: int = Field(ge=1, le=10)
+    score: int = Field(description="Score from 1 to 10")
     rationale: str
     red_flags: list[str] = Field(default_factory=list)
-    confidence: float = Field(ge=0.0, le=1.0)
+    confidence: float = Field(description="Confidence score between 0.0 and 1.0")
     failure_reason: str | None = None
+
+    @field_validator("score")
+    @classmethod
+    def _score_bounds(cls, v: int) -> int:
+        if not 1 <= v <= 10:
+            raise ValueError("score must be between 1 and 10")
+        return v
 
 
 class MVPPlan(BaseModel):
@@ -173,7 +180,9 @@ class Rebuttal(BaseModel):
     challenges: list[Challenge]
     severity: Severity
     suggested_mitigations: list[str]
-    overall_survivability: float = Field(ge=0.0, le=1.0)
+    overall_survivability: float = Field(
+        description="Survivability score between 0.0 and 1.0"
+    )
     failure_reason: str | None = None
 
 
