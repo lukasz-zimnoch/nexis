@@ -33,7 +33,7 @@ code changes. The default assignments are:
 
 | Agent | Model | Rationale |
 |-------|-------|-----------|
-| `trend_scanner` | `google/gemini-3-flash` | Fast extraction from long web context |
+| `trend_scanner` | `google/gemini-3-flash-preview` | Fast extraction from long web context |
 | `research_agent` | `anthropic/claude-opus-4-6` | Highest-leverage creative synthesis node |
 | `niche_validator` | `anthropic/claude-haiku-4-5` | Simple binary classification |
 | `reviewer_market` | `openai/gpt-5.3-instant` | Quantitative TAM/SAM/SOM reasoning |
