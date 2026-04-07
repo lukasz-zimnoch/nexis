@@ -8,7 +8,7 @@ on:
 
 env:
   REGION: us-central1
-  IMAGE: ghcr.io/${{ github.repository }}:${{ github.event.workflow_run.head_sha }}
+  IMAGE: us-central1-docker.pkg.dev/nexis-pipeline/ghcr-remote/${{ github.repository }}:${{ github.event.workflow_run.head_sha }}
 
 jobs:
   deploy:
