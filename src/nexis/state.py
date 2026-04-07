@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Any
+from typing import Annotated
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator
