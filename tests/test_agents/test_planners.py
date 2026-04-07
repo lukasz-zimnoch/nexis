@@ -6,7 +6,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from nexis.agents.planners import BusinessPlanComposer, GTMStrategist, MVPArchitect
+from nexis.agents.planners import (
+    BusinessPlanComposer,
+    BusinessPlanSynthesis,
+    GTMStrategist,
+    MVPArchitect,
+)
 from nexis.state import (
     BusinessPlan,
     Channel,
@@ -117,7 +122,7 @@ async def test_gtm_strategist_returns_gtm_plan(
         ],
         pricing_model=PricingModel(
             strategy="per-seat",
-            tiers=[{"name": "starter", "price": 29}],
+            tiers=[{"name": "starter", "price": "29", "description": "Basic plan"}],
             notes="Monthly and annual",
         ),
         launch_sequence=[
@@ -165,15 +170,13 @@ async def test_gtm_strategist_handles_llm_failure(
 async def test_composer_returns_business_plan(
     mock_llm_chain, sample_business_idea, sample_mvp_plan, sample_gtm_plan
 ):
-    expected = BusinessPlan(
+    synthesis = BusinessPlanSynthesis(
         idea_id=sample_business_idea.id,
         executive_summary="A promising AI code review SaaS targeting engineering teams.",
         key_assumptions=["Market willing to pay $29/seat/month"],
         success_metrics=["100 paying customers in 6 months"],
-        mvp_plan=sample_mvp_plan,
-        gtm_plan=sample_gtm_plan,
     )
-    mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(expected))
+    mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(synthesis))
 
     composer = BusinessPlanComposer(model_name="claude-sonnet-4-6", max_retries=0)
     result = await composer.invoke_plan(
@@ -183,6 +186,8 @@ async def test_composer_returns_business_plan(
     assert isinstance(result, BusinessPlan)
     assert result.idea_id == sample_business_idea.id
     assert result.failure_reason is None
+    assert result.mvp_plan is sample_mvp_plan
+    assert result.gtm_plan is sample_gtm_plan
     mock_llm_chain.ainvoke.assert_called_once()
 
 
@@ -193,15 +198,13 @@ async def test_composer_with_partial_mvp_input_does_not_crash(
     """Composer should proceed (and log a warning) when mvp_plan has a failure_reason."""
     failed_mvp = sample_mvp_plan.model_copy(update={"failure_reason": "LLM timed out"})
 
-    expected = BusinessPlan(
+    synthesis = BusinessPlanSynthesis(
         idea_id=sample_business_idea.id,
         executive_summary="Partial plan — MVP data unavailable.",
         key_assumptions=["GTM data only"],
         success_metrics=["First 100 customers"],
-        mvp_plan=failed_mvp,
-        gtm_plan=sample_gtm_plan,
     )
-    mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(expected))
+    mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(synthesis))
 
     composer = BusinessPlanComposer(model_name="claude-sonnet-4-6", max_retries=0)
     # Must not raise
@@ -223,15 +226,13 @@ async def test_composer_with_partial_gtm_input_does_not_crash(
         update={"failure_reason": "Rate limit exceeded"}
     )
 
-    expected = BusinessPlan(
+    synthesis = BusinessPlanSynthesis(
         idea_id=sample_business_idea.id,
         executive_summary="Partial plan — GTM data unavailable.",
         key_assumptions=["MVP data only"],
         success_metrics=["Ship MVP in 8 weeks"],
-        mvp_plan=sample_mvp_plan,
-        gtm_plan=failed_gtm,
     )
-    mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(expected))
+    mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(synthesis))
 
     composer = BusinessPlanComposer(model_name="claude-sonnet-4-6", max_retries=0)
     result = await composer.invoke_plan(

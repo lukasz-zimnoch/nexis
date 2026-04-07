@@ -114,7 +114,7 @@ async def test_timeout_results_in_failure_reason(mock_llm):
 
 def test_minimal_value_types():
     assert _minimal_value(str) == ""
-    assert _minimal_value(int) == 0
+    assert _minimal_value(int) == 1
     assert _minimal_value(float) == 0.0
     assert _minimal_value(bool) is False
     assert _minimal_value(list) == []

@@ -109,7 +109,7 @@ def sample_gtm(sample_idea: BusinessIdea) -> GTMPlan:
         ],
         pricing_model=PricingModel(
             strategy="per-seat",
-            tiers=[{"name": "starter", "price": 29, "seats": 5}],
+            tiers=[{"name": "starter", "price": "29", "description": "Up to 5 seats"}],
             notes="Annual discount available",
         ),
         launch_sequence=[
