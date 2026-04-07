@@ -18,20 +18,17 @@ BILLING_ACCOUNT_ID="${BILLING_ACCOUNT_ID:?Set BILLING_ACCOUNT_ID before running 
 
 SA_EMAIL="nexis-deploy@${PROJECT_ID}.iam.gserviceaccount.com"
 
-# Ensure the ADC quota project matches the target project. If it points
-# elsewhere, all gcloud API calls bill quota against the wrong project.
+# Verify the ADC quota project matches the target project. A mismatch
+# causes all API calls to bill quota against the wrong project, leading
+# to RESOURCE_EXHAUSTED errors.
 ADC_FILE="${CLOUDSDK_CONFIG:-$HOME/.config/gcloud}/application_default_credentials.json"
 if [[ -f "${ADC_FILE}" ]]; then
   ADC_QUOTA_PROJECT=$(python3 -c "import json; print(json.load(open('${ADC_FILE}')).get('quota_project_id', ''))" 2>/dev/null || echo "")
   if [[ -n "${ADC_QUOTA_PROJECT}" && "${ADC_QUOTA_PROJECT}" != "${PROJECT_ID}" ]]; then
-    echo "    ADC quota project is '${ADC_QUOTA_PROJECT}', updating to '${PROJECT_ID}'..."
-    python3 -c "
-import json
-f = '${ADC_FILE}'
-d = json.load(open(f))
-d['quota_project_id'] = '${PROJECT_ID}'
-json.dump(d, open(f, 'w'), indent=2)
-"
+    echo "ERROR: ADC quota project is '${ADC_QUOTA_PROJECT}', expected '${PROJECT_ID}'."
+    echo "       Run: gcloud auth application-default login --project=${PROJECT_ID}"
+    echo "       Then re-run this script."
+    exit 1
   fi
 fi
 
