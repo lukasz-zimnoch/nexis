@@ -16,29 +16,24 @@ REGION="${REGION:-us-central1}"
 REPO="${REPO:-lukasz-zimnoch/nexis}"
 BILLING_ACCOUNT_ID="${BILLING_ACCOUNT_ID:?Set BILLING_ACCOUNT_ID before running this script}"
 
-# Override the ADC quota project (which may point to a different project)
-# so API quota is billed against the target project.
-export CLOUDSDK_BILLING_QUOTA_PROJECT="${PROJECT_ID}"
-
 SA_EMAIL="nexis-deploy@${PROJECT_ID}.iam.gserviceaccount.com"
 
-echo "==> [0/7] Environment diagnostics"
-echo "    PROJECT_ID: ${PROJECT_ID}"
-echo "    CLOUDSDK_BILLING_QUOTA_PROJECT: ${CLOUDSDK_BILLING_QUOTA_PROJECT:-<unset>}"
-echo "    gcloud active account: $(gcloud config get-value account 2>/dev/null)"
-echo "    gcloud active project: $(gcloud config get-value project 2>/dev/null)"
-echo "    gcloud billing/quota_project: $(gcloud config get-value billing/quota_project 2>/dev/null || echo '<unset>')"
-PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)' 2>/dev/null || echo '<unknown>')
-echo "    Target project number: ${PROJECT_NUMBER}"
-echo "    ADC quota project (from creds file):"
+# Ensure the ADC quota project matches the target project. If it points
+# elsewhere, all gcloud API calls bill quota against the wrong project.
 ADC_FILE="${CLOUDSDK_CONFIG:-$HOME/.config/gcloud}/application_default_credentials.json"
 if [[ -f "${ADC_FILE}" ]]; then
-  echo "      file: ${ADC_FILE}"
-  echo "      quota_project_id: $(python3 -c "import json; print(json.load(open('${ADC_FILE}')).get('quota_project_id', '<not set>'))" 2>/dev/null || echo '<parse error>')"
-else
-  echo "      ADC file not found at ${ADC_FILE}"
+  ADC_QUOTA_PROJECT=$(python3 -c "import json; print(json.load(open('${ADC_FILE}')).get('quota_project_id', ''))" 2>/dev/null || echo "")
+  if [[ -n "${ADC_QUOTA_PROJECT}" && "${ADC_QUOTA_PROJECT}" != "${PROJECT_ID}" ]]; then
+    echo "    ADC quota project is '${ADC_QUOTA_PROJECT}', updating to '${PROJECT_ID}'..."
+    python3 -c "
+import json
+f = '${ADC_FILE}'
+d = json.load(open(f))
+d['quota_project_id'] = '${PROJECT_ID}'
+json.dump(d, open(f, 'w'), indent=2)
+"
+  fi
 fi
-echo ""
 
 echo "==> [1/7] Creating GCP project: ${PROJECT_ID}"
 if gcloud projects describe "${PROJECT_ID}" &>/dev/null; then
