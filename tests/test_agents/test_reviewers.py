@@ -342,3 +342,29 @@ def test_synthesizer_ranking_order(config, idea_a, idea_b):
     # idea_b should appear first in top_ideas
     if len(top_ideas) >= 2:
         assert top_ideas[0] == idea_b.id
+
+
+# ---------------------------------------------------------------------------
+# Failed review attribution tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_reviewer_failed_review_retains_idea_id_and_role(mock_llm_chain, idea_a):
+    """Failed reviews must still have correct idea_id and reviewer_role set."""
+    failed_review = Review(
+        idea_id="",
+        reviewer_role=ReviewerRole.market,
+        score=1,
+        rationale="",
+        confidence=0.0,
+        failure_reason="LLM timed out",
+    )
+    mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(failed_review))
+
+    agent = ReviewerAgent(role=ReviewerRole.financial, model_name="claude-sonnet-4-6")
+    result = await agent.invoke_review(idea_a)
+
+    assert result.failure_reason == "LLM timed out"
+    assert result.idea_id == idea_a.id
+    assert result.reviewer_role == ReviewerRole.financial

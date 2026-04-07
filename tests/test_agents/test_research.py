@@ -82,6 +82,10 @@ class TestResearchAgent:
                 agent.output_schema = ResearchOutput
                 agent.system_prompt = "test"
                 agent.max_retries = 0
+                agent.timeout = 120
+                agent.fallback_model = None
+                agent._tools = None
+                agent._switched_to_fallback = False
                 agent._llm = mock_llm
                 # Mock the search tool
                 agent._search = MagicMock()
@@ -113,6 +117,10 @@ class TestResearchAgent:
             agent.output_schema = ResearchOutput
             agent.system_prompt = "test"
             agent.max_retries = 0
+            agent.timeout = 120
+            agent.fallback_model = None
+            agent._tools = None
+            agent._switched_to_fallback = False
             agent._llm = mock_llm
             mock_search = MagicMock()
             mock_search.search = AsyncMock(
@@ -156,6 +164,10 @@ class TestTrendScanner:
             agent.output_schema = TrendScannerOutput
             agent.system_prompt = "test"
             agent.max_retries = 0
+            agent.timeout = 120
+            agent.fallback_model = None
+            agent._tools = None
+            agent._switched_to_fallback = False
             agent._llm = mock_llm
             mock_scraper = MagicMock()
             mock_scraper.scrape = AsyncMock(return_value=[make_trend_signal("raw")])
@@ -183,6 +195,10 @@ class TestTrendScanner:
             agent.output_schema = TrendScannerOutput
             agent.system_prompt = "test"
             agent.max_retries = 0
+            agent.timeout = 120
+            agent.fallback_model = None
+            agent._tools = None
+            agent._switched_to_fallback = False
             agent._llm = mock_llm
             mock_scraper = MagicMock()
             mock_scraper.scrape = AsyncMock(return_value=[])
@@ -224,6 +240,10 @@ class TestNicheValidator:
             agent.output_schema = NicheValidatorOutput
             agent.system_prompt = "test"
             agent.max_retries = 0
+            agent.timeout = 120
+            agent.fallback_model = None
+            agent._tools = None
+            agent._switched_to_fallback = False
             agent._llm = mock_llm
 
             result = await agent.invoke(ideas=all_ideas)
@@ -252,6 +272,10 @@ class TestNicheValidator:
             agent.output_schema = NicheValidatorOutput
             agent.system_prompt = "test"
             agent.max_retries = 0
+            agent.timeout = 120
+            agent.fallback_model = None
+            agent._tools = None
+            agent._switched_to_fallback = False
             agent._llm = mock_llm
 
             result = await agent.invoke(ideas=all_ideas)
