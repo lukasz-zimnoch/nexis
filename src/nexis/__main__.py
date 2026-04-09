@@ -64,13 +64,6 @@ def main() -> None:
         dest="output_format",
         help="Final report format (default: markdown)",
     )
-    parser.add_argument(
-        "--checkpoint-db",
-        default="./nexis_dev.db",
-        dest="checkpoint_db_path",
-        help="SQLite checkpoint database path (default: ./nexis_dev.db)",
-    )
-
     args = parser.parse_args()
 
     config_kwargs: dict = dict(
@@ -79,7 +72,6 @@ def main() -> None:
         top_k=args.top_k,
         score_threshold=args.score_threshold,
         output_format=args.output_format,
-        checkpoint_db_path=args.checkpoint_db_path,
     )
 
     if args.model_name is not None:

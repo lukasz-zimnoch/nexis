@@ -27,7 +27,6 @@ class PipelineConfig(BaseSettings):
         default_factory=_models.DEFAULT_AGENT_MODELS.copy
     )
     output_format: Literal["markdown", "json"] = "markdown"
-    checkpoint_db_path: str = "./nexis_dev.db"
 
     @model_validator(mode="after")
     def validate_weights_sum(self) -> "PipelineConfig":

@@ -10,7 +10,6 @@ from nexis.state import Report
 
 async def arun_pipeline(config: PipelineConfig) -> list[Report]:
     """Run the Nexis pipeline asynchronously."""
-    from langgraph.checkpoint.sqlite import SqliteSaver
     from nexis.graph import build_graph
 
     initial_state = {
@@ -29,9 +28,8 @@ async def arun_pipeline(config: PipelineConfig) -> list[Report]:
     }
     thread_config = {"configurable": {"thread_id": "nexis-run"}}
 
-    with SqliteSaver.from_conn_string(config.checkpoint_db_path) as checkpointer:
-        graph = build_graph(checkpointer=checkpointer)
-        final_state = await graph.ainvoke(initial_state, config=thread_config)
+    graph = build_graph()
+    final_state = await graph.ainvoke(initial_state, config=thread_config)
 
     return final_state.get("final_reports", [])
 
