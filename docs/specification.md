@@ -377,7 +377,7 @@ Every node emits structured JSON events via the `nexis.telemetry` logger. Each e
 - **LLM validation failure:** Retry with error context appended to prompt (max 2 retries). On persistent failure, write partial result with `failure_reason` field populated.
 - **Tool failure (search, API):** Immediate first attempt, then exponential backoff (1s, 4s, 16s). On persistent failure, agent proceeds with available data and logs a warning.
 - **Timeout:** Per-LLM-call timeout configurable via `config.llm_timeout` (default 300s, enforced in `BaseAgent` via `asyncio.wait_for`). On timeout, the agent switches to `config.fallback_model` (default: `google/gemini-3-flash-preview`) for remaining retries. If all retries are exhausted, a partial result with `failure_reason` is returned.
-- **Full pipeline failure:** Failed runs are logged with full state snapshot for debugging. The job is marked `failed` in Firestore and can be retried by submitting a new job.
+- **Full pipeline failure:** Failed runs are logged with full state snapshot for debugging.
 
 ---
 
