@@ -47,14 +47,18 @@ class JobRecord(BaseModel):
 # ---------------------------------------------------------------------------
 
 _JOBS_COLLECTION = "jobs"
+_firestore_client = None
 
 
 def get_firestore_client():
-    """Return a Firestore client using Application Default Credentials."""
-    from google.cloud import firestore  # type: ignore[import-untyped]
+    """Return a shared Firestore client (created once, reused across calls)."""
+    global _firestore_client
+    if _firestore_client is None:
+        from google.cloud import firestore  # type: ignore[import-untyped]
 
-    project_id = os.environ.get("GCP_PROJECT_ID")
-    return firestore.Client(project=project_id)
+        project_id = os.environ.get("GCP_PROJECT_ID")
+        _firestore_client = firestore.Client(project=project_id)
+    return _firestore_client
 
 
 # ---------------------------------------------------------------------------
@@ -87,10 +91,27 @@ def list_jobs(client, user_id: str, limit: int = 20) -> list[JobRecord]:
     return [_deserialize_job(doc.to_dict()) for doc in query.stream()]
 
 
-def update_job_status(client, job_id: str, status: JobStatus, **kwargs) -> None:
-    """Partially update a job document (status + any extra fields)."""
-    doc = client.collection(_JOBS_COLLECTION).document(job_id)
-    doc.update({"status": status.value, **kwargs})
+def update_job_status(
+    client,
+    job_id: str,
+    status: JobStatus,
+    *,
+    started_at: datetime | None = None,
+    completed_at: datetime | None = None,
+    error: str | None = None,
+    result: list[dict[str, Any]] | None = None,
+) -> None:
+    """Partially update a job document (status + optional timestamp/result fields)."""
+    updates: dict[str, Any] = {"status": status.value}
+    if started_at is not None:
+        updates["started_at"] = started_at
+    if completed_at is not None:
+        updates["completed_at"] = completed_at
+    if error is not None:
+        updates["error"] = error
+    if result is not None:
+        updates["result"] = result
+    client.collection(_JOBS_COLLECTION).document(job_id).update(updates)
 
 
 # ---------------------------------------------------------------------------
