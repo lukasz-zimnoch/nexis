@@ -11,8 +11,6 @@ from pathlib import Path
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
-
 from nexis.auth import CurrentUser, get_current_user
 from nexis.firestore import (
     JobConfig,
@@ -47,19 +45,6 @@ STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
 
 # ---------------------------------------------------------------------------
-# API models
-# ---------------------------------------------------------------------------
-
-
-class CreateJobRequest(BaseModel):
-    research_prompt: str
-    num_ideas: int = 8
-    top_k: int = 3
-    score_threshold: float = 0.55
-    output_format: str = "markdown"
-
-
-# ---------------------------------------------------------------------------
 # Health endpoint (no auth)
 # ---------------------------------------------------------------------------
 
@@ -76,23 +61,16 @@ async def health() -> dict[str, str]:
 
 @app.post("/api/jobs", status_code=201, response_model=JobRecord)
 async def create_job_endpoint(
-    body: CreateJobRequest,
+    body: JobConfig,
     user: CurrentUser = Depends(get_current_user),
 ) -> JobRecord:
     """Create a new pipeline job and trigger a Cloud Run Job execution."""
     job_id = str(uuid.uuid4())
-    config = JobConfig(
-        research_prompt=body.research_prompt,
-        num_ideas=body.num_ideas,
-        top_k=body.top_k,
-        score_threshold=body.score_threshold,
-        output_format=body.output_format,
-    )
     job = JobRecord(
         id=job_id,
         user_id=user.uid,
         status=JobStatus.pending,
-        config=config,
+        config=body,
         created_at=datetime.now(timezone.utc),
     )
 
@@ -100,7 +78,7 @@ async def create_job_endpoint(
     create_job(fs_client, job)
 
     try:
-        await asyncio.to_thread(trigger_job_execution, job_id, config)
+        await asyncio.to_thread(trigger_job_execution, job_id, body)
     except Exception as exc:
         logger.exception("Failed to trigger Cloud Run Job for %s", job_id)
         update_job_status(fs_client, job_id, JobStatus.failed, error=str(exc))

@@ -122,7 +122,6 @@ def update_job_status(
 def _serialize_job(job: JobRecord) -> dict[str, Any]:
     data = job.model_dump()
     data["status"] = job.status.value
-    data["config"] = job.config.model_dump()
     return data
 
 
