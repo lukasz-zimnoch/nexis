@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from nexis.auth import CurrentUser, get_current_user
 from nexis.firestore import (
@@ -19,12 +22,11 @@ from nexis.firestore import (
     get_firestore_client,
     get_job,
     list_jobs,
+    update_job_status,
 )
 from nexis.graph import build_graph
 from nexis.job_trigger import trigger_job_execution
 from nexis.state import Report  # noqa: F401 — kept for `langgraph dev` graph export
-from datetime import datetime, timezone
-from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -72,11 +74,11 @@ async def health() -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 
-@app.post("/api/jobs", status_code=201)
+@app.post("/api/jobs", status_code=201, response_model=JobRecord)
 async def create_job_endpoint(
     body: CreateJobRequest,
     user: CurrentUser = Depends(get_current_user),
-) -> dict:
+) -> JobRecord:
     """Create a new pipeline job and trigger a Cloud Run Job execution."""
     job_id = str(uuid.uuid4())
     config = JobConfig(
@@ -96,26 +98,31 @@ async def create_job_endpoint(
 
     fs_client = get_firestore_client()
     create_job(fs_client, job)
-    trigger_job_execution(job_id, config)
 
-    return job.model_dump(mode="json")
+    try:
+        await asyncio.to_thread(trigger_job_execution, job_id, config)
+    except Exception as exc:
+        logger.exception("Failed to trigger Cloud Run Job for %s", job_id)
+        update_job_status(fs_client, job_id, JobStatus.failed, error=str(exc))
+        raise HTTPException(status_code=503, detail="Failed to start job execution")
+
+    return job
 
 
-@app.get("/api/jobs")
+@app.get("/api/jobs", response_model=list[JobRecord])
 async def list_jobs_endpoint(
     user: CurrentUser = Depends(get_current_user),
-) -> list[dict]:
+) -> list[JobRecord]:
     """List all jobs for the authenticated user."""
     fs_client = get_firestore_client()
-    jobs = list_jobs(fs_client, user.uid)
-    return [j.model_dump(mode="json") for j in jobs]
+    return list_jobs(fs_client, user.uid)
 
 
-@app.get("/api/jobs/{job_id}")
+@app.get("/api/jobs/{job_id}", response_model=JobRecord)
 async def get_job_endpoint(
     job_id: str,
     user: CurrentUser = Depends(get_current_user),
-) -> dict:
+) -> JobRecord:
     """Get a single job by ID."""
     fs_client = get_firestore_client()
     job = get_job(fs_client, job_id)
@@ -125,7 +132,7 @@ async def get_job_endpoint(
     if job.user_id != user.uid:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    return job.model_dump(mode="json")
+    return job
 
 
 # ---------------------------------------------------------------------------
@@ -141,4 +148,6 @@ if STATIC_DIR.is_dir():
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def spa_fallback(full_path: str) -> FileResponse:
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404)
         return FileResponse(str(STATIC_DIR / "index.html"))

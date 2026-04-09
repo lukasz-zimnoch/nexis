@@ -92,6 +92,21 @@ def test_create_job_returns_201(sample_job_record: JobRecord):
     mock_trigger.assert_called_once()
 
 
+def test_create_job_returns_503_when_trigger_fails():
+    with (
+        patch("nexis.server.get_firestore_client"),
+        patch("nexis.server.create_job"),
+        patch("nexis.server.update_job_status") as mock_update_status,
+        patch("nexis.server.trigger_job_execution", side_effect=RuntimeError("quota exceeded")),
+    ):
+        resp = client.post("/api/jobs", json={"research_prompt": "Test prompt"})
+
+    assert resp.status_code == 503
+    mock_update_status.assert_called_once()
+    _, kwargs = mock_update_status.call_args
+    assert kwargs.get("error") is not None
+
+
 def test_create_job_triggers_with_job_id(sample_job_record: JobRecord):
     with (
         patch("nexis.server.get_firestore_client"),
