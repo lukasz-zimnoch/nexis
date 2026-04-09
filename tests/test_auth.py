@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
 from nexis.auth import CurrentUser, get_current_user
@@ -18,7 +18,7 @@ _test_app = FastAPI()
 
 
 @_test_app.get("/protected")
-async def protected_endpoint(user: CurrentUser = __import__("fastapi").Depends(get_current_user)):
+async def protected_endpoint(user: CurrentUser = Depends(get_current_user)):
     return {"uid": user.uid, "email": user.email}
 
 
@@ -56,7 +56,7 @@ def test_empty_bearer_token_returns_401():
 
 def test_invalid_token_returns_401():
     with (
-        patch("nexis.auth._firebase_initialized", True),
+        patch("nexis.auth._init_firebase"),
         patch("nexis.auth.firebase_auth") as mock_fb,
     ):
         mock_fb.verify_id_token.side_effect = Exception("invalid token")
@@ -67,7 +67,7 @@ def test_invalid_token_returns_401():
 def test_valid_token_returns_current_user():
     decoded = {"uid": "user-123", "email": "user@example.com"}
     with (
-        patch("nexis.auth._firebase_initialized", True),
+        patch("nexis.auth._init_firebase"),
         patch("nexis.auth.firebase_auth") as mock_fb,
     ):
         mock_fb.verify_id_token.return_value = decoded
@@ -82,7 +82,7 @@ def test_valid_token_returns_current_user():
 def test_valid_token_without_email():
     decoded = {"uid": "user-456"}
     with (
-        patch("nexis.auth._firebase_initialized", True),
+        patch("nexis.auth._init_firebase"),
         patch("nexis.auth.firebase_auth") as mock_fb,
     ):
         mock_fb.verify_id_token.return_value = decoded
