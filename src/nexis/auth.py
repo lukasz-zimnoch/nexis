@@ -11,19 +11,20 @@ from firebase_admin import credentials  # type: ignore[import-untyped]
 from fastapi import HTTPException, Request
 
 
+_firebase_initialized = False
+
+
 def _init_firebase() -> None:
-    """Idempotent, thread-safe Firebase Admin SDK initialisation using ADC."""
-    try:
-        firebase_admin.get_app()
-        return  # already initialised
-    except ValueError:
-        pass
+    global _firebase_initialized
+    if _firebase_initialized:
+        return
     try:
         project_id = os.environ.get("GCP_PROJECT_ID")
         cred = credentials.ApplicationDefault()
         firebase_admin.initialize_app(cred, {"projectId": project_id})
     except ValueError:
         pass  # another thread beat us to it
+    _firebase_initialized = True
 
 
 @dataclass

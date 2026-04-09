@@ -8,6 +8,15 @@ from google.cloud import run_v2  # type: ignore[import-untyped]
 
 from nexis.firestore import JobConfig
 
+_jobs_client: run_v2.JobsClient | None = None
+
+
+def _get_jobs_client() -> run_v2.JobsClient:
+    global _jobs_client
+    if _jobs_client is None:
+        _jobs_client = run_v2.JobsClient()
+    return _jobs_client
+
 
 def trigger_job_execution(job_id: str, config: JobConfig) -> None:
     """Trigger a Cloud Run Job execution with config passed as env var overrides."""
@@ -15,7 +24,7 @@ def trigger_job_execution(job_id: str, config: JobConfig) -> None:
     region = os.environ["GCP_REGION"]
     job_name = os.environ["CLOUD_RUN_JOB_NAME"]
 
-    client = run_v2.JobsClient()
+    client = _get_jobs_client()
     job_path = f"projects/{project_id}/locations/{region}/jobs/{job_name}"
 
     overrides = run_v2.RunJobRequest.Overrides(
