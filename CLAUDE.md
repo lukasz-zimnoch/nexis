@@ -22,8 +22,7 @@ See the [specification](docs/specification.md) for full architecture, data contr
 
 ## Checkpointer
 
-- **CLI** (`nexis` command): uses `SqliteSaver` for checkpointing (set `CHECKPOINT_DB_PATH=./nexis_dev.db` in `.env`). `SqliteSaver.from_conn_string()` takes a file path, not a SQLAlchemy URL. Never hardcode connection strings.
-- **Cloud Run** (`server.py`): uses `MemorySaver` (in-memory) — no external database needed. State is ephemeral per request.
+All code paths (CLI, Cloud Run service, Cloud Run Job) use `MemorySaver`. State is in-memory and ephemeral per run. There is no SQLite dependency.
 
 ## Deployment
 

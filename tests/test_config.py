@@ -16,7 +16,6 @@ def test_valid_construction():
     assert config.score_threshold == 0.55
     assert config.max_retries == 2
     assert config.output_format == "markdown"
-    assert config.checkpoint_db_path == "./nexis_dev.db"
     assert isinstance(config.agent_models, dict)
     assert len(config.agent_models) == 13
 

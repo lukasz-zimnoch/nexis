@@ -12,7 +12,6 @@ dependencies = [
     "langchain>=1.2",
     "langchain-anthropic>=1.4",
     "langchain-openai>=1.1",
-    "langgraph-checkpoint-sqlite>=3.0",
     "pydantic>=2.7.4",
     "pydantic-settings>=2.13",
     "tavily-python>=0.7",

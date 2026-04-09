@@ -312,7 +312,7 @@ All LLM-backed agents use LangChain's `with_structured_output()` to bind Pydanti
 
 ### 5.6 Checkpointing and Persistence
 
-The graph uses an `SqliteSaver` checkpointer. This enables full state persistence at every node transition, allowing the pipeline to be resumed from any point after a crash, and providing a complete audit trail for debugging and analysis.
+The graph uses a `MemorySaver` checkpointer. State is held in memory for the duration of a single pipeline run and is not persisted across runs. This is appropriate for the Cloud Run execution model where each job runs to completion in an isolated container.
 
 ---
 
@@ -363,7 +363,6 @@ All pipeline behavior is controlled via a `PipelineConfig` Pydantic model passed
 | `output_format` | `str` | `markdown` | Final report format: `markdown` \| `json` |
 | `llm_timeout` | `int` | `300` | Per-LLM-call timeout in seconds (enforced via `asyncio.wait_for`) |
 | `fallback_model` | `str` | `google/gemini-3-flash-preview` | Fallback model used when primary model times out (switched for remaining retries) |
-| `checkpoint_db_path` | `str` | `./nexis_dev.db` | SQLite checkpoint database file path (passed to `SqliteSaver.from_conn_string()`) |
 
 ---
 
@@ -378,7 +377,7 @@ Every node emits structured JSON events via the `nexis.telemetry` logger. Each e
 - **LLM validation failure:** Retry with error context appended to prompt (max 2 retries). On persistent failure, write partial result with `failure_reason` field populated.
 - **Tool failure (search, API):** Immediate first attempt, then exponential backoff (1s, 4s, 16s). On persistent failure, agent proceeds with available data and logs a warning.
 - **Timeout:** Per-LLM-call timeout configurable via `config.llm_timeout` (default 300s, enforced in `BaseAgent` via `asyncio.wait_for`). On timeout, the agent switches to `config.fallback_model` (default: `google/gemini-3-flash-preview`) for remaining retries. If all retries are exhausted, a partial result with `failure_reason` is returned.
-- **Full pipeline failure:** Checkpointed state allows manual resume from the last successful node. Failed runs are logged with full state snapshot for debugging.
+- **Full pipeline failure:** Failed runs are logged with full state snapshot for debugging.
 
 ---
 
@@ -406,7 +405,7 @@ Approximate per-run cost assuming 8 candidate ideas with 3 surviving to Layer 3 
 | LLM Provider | OpenRouter — all LLM calls route through `openrouter.ai/api/v1` (`OPENROUTER_API_KEY` required); per-agent model IDs defined in `nexis/models.py` |
 | Structured Output | LangChain `with_structured_output()` + Pydantic v2 models |
 | Web Search | Tavily Search API |
-| Checkpointing | SqliteSaver via `langgraph-checkpoint-sqlite` |
+| Checkpointing | MemorySaver (in-memory, ephemeral per run) |
 | Tracing | Structured logging via `nexis.telemetry`; LangSmith (opt-in via `LANGCHAIN_TRACING_V2`) |
 | Runtime | Python 3.11+, asyncio for parallel execution |
 | Package Management | uv |
