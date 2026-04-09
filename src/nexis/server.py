@@ -2,15 +2,29 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
+from datetime import datetime, timezone
+from pathlib import Path
 
-from fastapi import FastAPI
-from pydantic import BaseModel
-
-from nexis.config import PipelineConfig
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from nexis.auth import CurrentUser, get_current_user
+from nexis.firestore import (
+    JobConfig,
+    JobRecord,
+    JobStatus,
+    create_job,
+    get_firestore_client,
+    get_job,
+    list_jobs,
+    update_job_status,
+)
 from nexis.graph import build_graph
-from nexis.state import Report
+from nexis.job_trigger import trigger_job_execution
+from nexis.state import Report  # noqa: F401 — kept for `langgraph dev` graph export
 
 logger = logging.getLogger(__name__)
 
@@ -26,58 +40,92 @@ graph = build_graph(checkpointer=None)
 
 app = FastAPI(title="Nexis Pipeline")
 
-
-class RunRequest(BaseModel):
-    research_prompt: str
-    num_ideas: int = 8
-    top_k: int = 3
-    score_threshold: float = 0.55
-    output_format: str = "markdown"
-    llm_timeout: int = 300
-    fallback_model: str = "google/gemini-3-flash-preview"
+# SPA static file directory (populated by Docker multi-stage build)
+STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
 
-class RunResponse(BaseModel):
-    reports: list[Report]
-
-
-@app.post("/run", response_model=RunResponse)
-async def run(request: RunRequest) -> RunResponse:
-    """Run the full Nexis pipeline and return generated reports."""
-    config = PipelineConfig(
-        research_prompt=request.research_prompt,
-        num_ideas=request.num_ideas,
-        top_k=request.top_k,
-        score_threshold=request.score_threshold,
-        output_format=request.output_format,
-        llm_timeout=request.llm_timeout,
-        fallback_model=request.fallback_model,
-    )
-
-    pipeline = build_graph()  # defaults to MemorySaver
-
-    initial_state = {
-        "config": config,
-        "research_prompt": config.research_prompt,
-        "iteration": 0,
-        "ideas": [],
-        "reviews": [],
-        "scores": {},
-        "top_ideas": [],
-        "mvp_plans": {},
-        "gtm_plans": {},
-        "business_plans": {},
-        "rebuttals": {},
-        "final_reports": [],
-    }
-    thread_config = {"configurable": {"thread_id": str(uuid.uuid4())}}
-
-    final_state = await pipeline.ainvoke(initial_state, config=thread_config)
-    reports = final_state.get("final_reports", [])
-
-    return RunResponse(reports=reports)
+# ---------------------------------------------------------------------------
+# Health endpoint (no auth)
+# ---------------------------------------------------------------------------
 
 
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# Job API endpoints (all require auth)
+# ---------------------------------------------------------------------------
+
+
+@app.post("/api/jobs", status_code=201, response_model=JobRecord)
+async def create_job_endpoint(
+    body: JobConfig,
+    user: CurrentUser = Depends(get_current_user),
+) -> JobRecord:
+    """Create a new pipeline job and trigger a Cloud Run Job execution."""
+    job_id = str(uuid.uuid4())
+    job = JobRecord(
+        id=job_id,
+        user_id=user.uid,
+        status=JobStatus.pending,
+        config=body,
+        created_at=datetime.now(timezone.utc),
+    )
+
+    fs_client = get_firestore_client()
+    create_job(fs_client, job)
+
+    try:
+        await asyncio.to_thread(trigger_job_execution, job_id, body)
+    except Exception as exc:
+        logger.exception("Failed to trigger Cloud Run Job for %s", job_id)
+        update_job_status(fs_client, job_id, JobStatus.failed, error=str(exc))
+        raise HTTPException(status_code=503, detail="Failed to start job execution")
+
+    return job
+
+
+@app.get("/api/jobs", response_model=list[JobRecord])
+async def list_jobs_endpoint(
+    user: CurrentUser = Depends(get_current_user),
+) -> list[JobRecord]:
+    """List all jobs for the authenticated user."""
+    fs_client = get_firestore_client()
+    return list_jobs(fs_client, user.uid)
+
+
+@app.get("/api/jobs/{job_id}", response_model=JobRecord)
+async def get_job_endpoint(
+    job_id: str,
+    user: CurrentUser = Depends(get_current_user),
+) -> JobRecord:
+    """Get a single job by ID."""
+    fs_client = get_firestore_client()
+    job = get_job(fs_client, job_id)
+
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.user_id != user.uid:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    return job
+
+
+# ---------------------------------------------------------------------------
+# SPA serving (registered LAST so API routes take priority)
+# ---------------------------------------------------------------------------
+
+if STATIC_DIR.is_dir():
+    app.mount(
+        "/assets",
+        StaticFiles(directory=str(STATIC_DIR / "assets")),
+        name="assets",
+    )
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa_fallback(full_path: str) -> FileResponse:
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404)
+        return FileResponse(str(STATIC_DIR / "index.html"))
