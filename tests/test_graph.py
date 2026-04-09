@@ -91,6 +91,37 @@ def test_supervisor_node_retry_appends_to_prompt():
     assert result["research_prompt"].startswith("Find SaaS ideas")
 
 
+def test_supervisor_node_retry_includes_previous_idea_titles():
+    """On retry, supervisor should include previous idea titles in the prompt."""
+    from nexis.state import BusinessIdea
+
+    ideas = [
+        BusinessIdea(
+            id="id-1",
+            title="AI Code Reviewer",
+            problem_statement="P1",
+            target_market="M1",
+            revenue_model="SaaS",
+            confidence=0.8,
+        ),
+        BusinessIdea(
+            id="id-2",
+            title="DevOps Copilot",
+            problem_statement="P2",
+            target_market="M2",
+            revenue_model="SaaS",
+            confidence=0.7,
+        ),
+    ]
+    state = make_state(iteration=1, research_prompt="Find SaaS ideas")
+    state["ideas"] = ideas
+    result = supervisor_node(state)
+
+    assert "AI Code Reviewer" in result["research_prompt"]
+    assert "DevOps Copilot" in result["research_prompt"]
+    assert "Do NOT regenerate" in result["research_prompt"]
+
+
 # ---------------------------------------------------------------------------
 # force_pass_node tests
 # ---------------------------------------------------------------------------

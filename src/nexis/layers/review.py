@@ -33,9 +33,17 @@ class ReviewNodeState(PipelineState):
 
 
 def route_to_reviewers(state: PipelineState) -> list[Send]:
-    """Fan-out: send each (idea, role) pair to review_node."""
+    """Fan-out: send each (idea, role) pair to review_node.
+
+    Only fans out over ideas from the current iteration to avoid
+    re-reviewing ideas from previous retry iterations.
+    """
+    current_iteration = state.get("iteration", 0)
+    current_ideas = [
+        idea for idea in state["ideas"] if idea.iteration == current_iteration
+    ]
     sends = []
-    for idea in state["ideas"]:
+    for idea in current_ideas:
         for role in ReviewerRole:
             sends.append(
                 Send(
@@ -65,21 +73,42 @@ async def review_node(state: ReviewNodeState) -> dict:
         role=role,
         model_name=config.model_for(f"reviewer_{role.value}"),
         max_retries=config.max_retries,
+        timeout=config.llm_timeout,
+        fallback_model=config.fallback_model,
     )
 
     logger.debug("Reviewing idea '%s' with role '%s'", idea.title, role.value)
     review = await agent.invoke_review(idea)
 
+    if review.failure_reason:
+        logger.warning(
+            "Review failed for idea '%s' (role=%s): %s",
+            idea.title,
+            role.value,
+            review.failure_reason,
+        )
+
     return {"reviews": [review]}
 
 
 async def synthesize_node(state: PipelineState) -> dict:
-    """Synthesize all reviews into scores and a ranked top_ideas list."""
+    """Synthesize all reviews into scores and a ranked top_ideas list.
+
+    Filters ideas and reviews to the current iteration to avoid
+    scoring stale data from previous retry iterations.
+    """
+    current_iteration = state.get("iteration", 0)
+    current_ideas = [
+        idea for idea in state["ideas"] if idea.iteration == current_iteration
+    ]
+    current_idea_ids = {idea.id for idea in current_ideas}
+    current_reviews = [r for r in state["reviews"] if r.idea_id in current_idea_ids]
+
     synthesizer = ReviewSynthesizer()
     scores, top_ideas = synthesizer.synthesize(
-        reviews=state["reviews"],
+        reviews=current_reviews,
         config=state["config"],
-        ideas=state["ideas"],
+        ideas=current_ideas,
     )
     logger.info(
         "Synthesized %d reviews → %d ideas above threshold",

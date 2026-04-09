@@ -63,22 +63,25 @@ class ReviewerAgent(BaseAgent):
         role: ReviewerRole,
         model_name: str,
         max_retries: int = 2,
+        timeout: int = 120,
+        fallback_model: str | None = None,
     ) -> None:
         super().__init__(
             model_name=model_name,
             output_schema=Review,
             system_prompt=REVIEWER_PROMPTS[role],
             max_retries=max_retries,
+            timeout=timeout,
+            fallback_model=fallback_model,
         )
         self.role = role
 
     async def invoke_review(self, idea: BusinessIdea) -> Review:
         """Invoke the reviewer for a given idea and return a Review."""
         review = await self.invoke({"idea": idea})
-        if review.failure_reason is None:
-            review = review.model_copy(
-                update={"idea_id": idea.id, "reviewer_role": self.role}
-            )
+        review = review.model_copy(
+            update={"idea_id": idea.id, "reviewer_role": self.role}
+        )
         return review
 
 
@@ -86,9 +89,17 @@ def create_reviewer(
     role: ReviewerRole,
     model_name: str,
     max_retries: int = 2,
+    timeout: int = 120,
+    fallback_model: str | None = None,
 ) -> ReviewerAgent:
     """Factory function to create a ReviewerAgent for the given role."""
-    return ReviewerAgent(role=role, model_name=model_name, max_retries=max_retries)
+    return ReviewerAgent(
+        role=role,
+        model_name=model_name,
+        max_retries=max_retries,
+        timeout=timeout,
+        fallback_model=fallback_model,
+    )
 
 
 # ---------------------------------------------------------------------------

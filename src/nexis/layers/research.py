@@ -49,6 +49,8 @@ async def trend_scanner_node(state: ResearchLayerState) -> dict:
     agent = TrendScanner(
         model_name=config.model_for("trend_scanner"),
         max_retries=config.max_retries,
+        timeout=config.llm_timeout,
+        fallback_model=config.fallback_model,
     )
 
     try:
@@ -71,6 +73,8 @@ async def research_agent_node(state: ResearchLayerState) -> dict:
     agent = ResearchAgent(
         model_name=config.model_for("research_agent"),
         max_retries=config.max_retries,
+        timeout=config.llm_timeout,
+        fallback_model=config.fallback_model,
     )
 
     try:
@@ -101,6 +105,8 @@ async def niche_validator_node(state: ResearchLayerState) -> dict:
     agent = NicheValidator(
         model_name=config.model_for("niche_validator"),
         max_retries=config.max_retries,
+        timeout=config.llm_timeout,
+        fallback_model=config.fallback_model,
     )
 
     try:
@@ -114,6 +120,21 @@ async def niche_validator_node(state: ResearchLayerState) -> dict:
     except Exception as exc:
         logger.warning("NicheValidator failed: %s — keeping original ideas", exc)
         validated = raw_ideas
+
+    # Enforce hard cap on num_ideas (LLM count is only a soft hint)
+    if len(validated) > config.num_ideas:
+        logger.info(
+            "Truncating %d validated ideas to num_ideas=%d",
+            len(validated),
+            config.num_ideas,
+        )
+        validated = validated[: config.num_ideas]
+
+    # Tag each idea with the current iteration number
+    current_iteration = state.get("iteration", 0)
+    validated = [
+        idea.model_copy(update={"iteration": current_iteration}) for idea in validated
+    ]
 
     # `ideas` uses operator.add — write the validated list here so the
     # parent graph accumulates it correctly

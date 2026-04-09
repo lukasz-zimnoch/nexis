@@ -155,6 +155,7 @@ The top-level state object that flows through the entire graph:
 | `confidence` | `float (0–1)` | Research agent's self-assessed confidence |
 | `sources` | `list[str]` | URLs of supporting research |
 | `trend_signals` | `list[TrendSignal]` | Related trends from Trend Scanner |
+| `iteration` | `int` | Pipeline retry iteration that produced this idea (0-based) |
 | `failure_reason` | `str \| None` | Populated on persistent LLM failure; downstream nodes handle gracefully |
 
 #### 4.2.2 Review
@@ -291,7 +292,7 @@ async def plan_idea_node(state: PlanningLayerState) -> dict:
 After the Review Synthesizer runs, a `should_retry` function evaluates the state and returns one of three routing keys:
 
 - `"planning"` — `top_ideas` is non-empty; proceed to Layer 3 normally.
-- `"retry"` — `top_ideas` is empty AND `iteration < config.max_retries`; route to `increment_iteration` → `supervisor` → Layer 1 with a refined prompt (appending "previous ideas were too generic, focus on underserved niches").
+- `"retry"` — `top_ideas` is empty AND `iteration < config.max_retries`; route to `increment_iteration` → `supervisor` → Layer 1 with a refined prompt (appending "previous ideas were too generic, focus on underserved niches" and an explicit exclusion list of previously generated idea titles). Ideas are tagged with their `iteration` number so that the review layer only fans out over ideas from the current iteration.
 - `"force_pass"` — `top_ideas` is empty AND retries are exhausted; route to `force_pass` node which selects the top `config.top_k` ideas by raw score regardless of threshold, then proceeds to Layer 3.
 
 ```python
@@ -360,6 +361,8 @@ All pipeline behavior is controlled via a `PipelineConfig` Pydantic model passed
 | `reviewer_weights` | `dict` | See §6.1 | Custom weights for the scoring formula |
 | `agent_models` | `dict[str, str]` | Per-agent defaults from `nexis/models.py` | Maps agent keys (e.g. `"research_agent"`, `"reviewer_market"`) to OpenRouter model IDs. All LLM calls are routed through OpenRouter — `OPENROUTER_API_KEY` must be set. |
 | `output_format` | `str` | `markdown` | Final report format: `markdown` \| `json` |
+| `llm_timeout` | `int` | `300` | Per-LLM-call timeout in seconds (enforced via `asyncio.wait_for`) |
+| `fallback_model` | `str` | `google/gemini-3-flash-preview` | Fallback model used when primary model times out (switched for remaining retries) |
 
 ---
 
@@ -373,8 +376,8 @@ Every node emits structured JSON events via the `nexis.telemetry` logger. Each e
 
 - **LLM validation failure:** Retry with error context appended to prompt (max 2 retries). On persistent failure, write partial result with `failure_reason` field populated.
 - **Tool failure (search, API):** Immediate first attempt, then exponential backoff (1s, 4s, 16s). On persistent failure, agent proceeds with available data and logs a warning.
-- **Timeout:** Per-LLM-call timeout of 120 seconds (enforced in `BaseAgent` via `asyncio.wait_for`). On timeout, the node is marked as failed and the pipeline continues with partial state.
-- **Full pipeline failure:** Checkpointed state allows manual resume from the last successful node. Failed runs are logged with full state snapshot for debugging.
+- **Timeout:** Per-LLM-call timeout configurable via `config.llm_timeout` (default 300s, enforced in `BaseAgent` via `asyncio.wait_for`). On timeout, the agent switches to `config.fallback_model` (default: `google/gemini-3-flash-preview`) for remaining retries. If all retries are exhausted, a partial result with `failure_reason` is returned.
+- **Full pipeline failure:** Failed runs are logged with full state snapshot for debugging. The job is marked `failed` in Firestore and can be retried by submitting a new job.
 
 ---
 

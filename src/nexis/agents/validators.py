@@ -116,7 +116,13 @@ DEFAULT_IDEA_CARD_TEMPLATE = """\
 class DevilsAdvocate(BaseAgent):
     """Adversarially stress-tests business plans to surface critical weaknesses."""
 
-    def __init__(self, model_name: str, max_retries: int = 2) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        max_retries: int = 2,
+        timeout: int = 120,
+        fallback_model: str | None = None,
+    ) -> None:
         super().__init__(
             model_name=model_name,
             output_schema=Rebuttal,
@@ -127,6 +133,8 @@ class DevilsAdvocate(BaseAgent):
                 "Be specific and evidence-based."
             ),
             max_retries=max_retries,
+            timeout=timeout,
+            fallback_model=fallback_model,
         )
 
     async def invoke_rebuttal(self, plan: BusinessPlan) -> Rebuttal:
@@ -173,7 +181,17 @@ class ReportGenerator:
     def generate(self, state: dict) -> Report:
         """Render a Report from the full pipeline state."""
         config = state["config"]
-        ideas = state.get("ideas", [])
+        raw_ideas = state.get("ideas", [])
+
+        # Deduplicate ideas by id (keep first occurrence) — ideas accumulate
+        # across retry iterations via operator.add, so duplicates are expected.
+        seen_ids: set[str] = set()
+        ideas: list = []
+        for idea in raw_ideas:
+            if idea.id not in seen_ids:
+                seen_ids.add(idea.id)
+                ideas.append(idea)
+
         top_ideas_ids = state.get("top_ideas", [])
         top_ideas = [i for i in ideas if i.id in top_ideas_ids]
 
