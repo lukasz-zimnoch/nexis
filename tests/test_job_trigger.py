@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -35,7 +35,10 @@ def test_trigger_calls_run_job_with_correct_path():
         mock_client.run_job.assert_called_once()
         # Check the name passed to RunJobRequest constructor
         _, kwargs = mock_run_v2.RunJobRequest.call_args
-        assert kwargs["name"] == "projects/test-project/locations/us-central1/jobs/nexis-job"
+        assert (
+            kwargs["name"]
+            == "projects/test-project/locations/us-central1/jobs/nexis-job"
+        )
 
 
 def test_trigger_passes_env_overrides():

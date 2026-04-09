@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -68,7 +68,7 @@ def test_health():
 
 def test_create_job_returns_201(sample_job_record: JobRecord):
     with (
-        patch("nexis.server.get_firestore_client") as mock_fs,
+        patch("nexis.server.get_firestore_client"),
         patch("nexis.server.create_job") as mock_create,
         patch("nexis.server.trigger_job_execution") as mock_trigger,
     ):
@@ -97,7 +97,10 @@ def test_create_job_returns_503_when_trigger_fails():
         patch("nexis.server.get_firestore_client"),
         patch("nexis.server.create_job"),
         patch("nexis.server.update_job_status") as mock_update_status,
-        patch("nexis.server.trigger_job_execution", side_effect=RuntimeError("quota exceeded")),
+        patch(
+            "nexis.server.trigger_job_execution",
+            side_effect=RuntimeError("quota exceeded"),
+        ),
     ):
         resp = client.post("/api/jobs", json={"research_prompt": "Test prompt"})
 

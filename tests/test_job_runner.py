@@ -44,6 +44,7 @@ async def test_run_job_happy_path():
         patch("nexis.graph.build_graph", return_value=mock_graph),
     ):
         from nexis.job_runner import run_job
+
         await run_job()
 
     statuses = [call.args[2] for call in mock_update.call_args_list]
@@ -69,6 +70,7 @@ async def test_run_job_failure_sets_failed_status():
         pytest.raises(SystemExit),
     ):
         from nexis.job_runner import run_job
+
         await run_job()
 
     statuses = [call.args[2] for call in mock_update.call_args_list]
