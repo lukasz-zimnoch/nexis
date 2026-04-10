@@ -6,16 +6,18 @@ resource "google_cloud_run_v2_service" "nexis" {
   ingress             = "INGRESS_TRAFFIC_ALL"
   deletion_protection = false
 
-  scaling {
-    min_instance_count = 0
-    max_instance_count = 2
-  }
-
   template {
     service_account = google_service_account.nexis_runtime.email
 
     # 5-minute timeout is sufficient for the API; the pipeline runs on Cloud Run Job.
     timeout = "300s"
+
+    # Per-revision autoscaling (RevisionScaling in the Cloud Run v2 API). The
+    # top-level `scaling` block is reserved for service-wide manual scaling.
+    scaling {
+      min_instance_count = 0
+      max_instance_count = 2
+    }
 
     containers {
       image = "${var.region}-docker.pkg.dev/${var.project_id}/ghcr-remote/lukasz-zimnoch/nexis:latest"
