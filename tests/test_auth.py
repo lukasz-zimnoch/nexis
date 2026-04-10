@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
+from firebase_admin.auth import InvalidIdTokenError  # type: ignore[import-untyped]
 
 from nexis.auth import CurrentUser, get_current_user
 
@@ -41,16 +42,19 @@ def _auth_header(token: str) -> dict[str, str]:
 def test_missing_auth_header_returns_401():
     resp = client.get("/protected")
     assert resp.status_code == 401
+    assert resp.headers.get("WWW-Authenticate") == "Bearer"
 
 
 def test_non_bearer_header_returns_401():
     resp = client.get("/protected", headers={"Authorization": "Basic abc123"})
     assert resp.status_code == 401
+    assert resp.headers.get("WWW-Authenticate") == "Bearer"
 
 
 def test_empty_bearer_token_returns_401():
     resp = client.get("/protected", headers={"Authorization": "Bearer "})
     assert resp.status_code == 401
+    assert resp.headers.get("WWW-Authenticate") == "Bearer"
 
 
 def test_invalid_token_returns_401():
@@ -58,9 +62,20 @@ def test_invalid_token_returns_401():
         patch("nexis.auth._init_firebase"),
         patch("nexis.auth.firebase_auth") as mock_fb,
     ):
-        mock_fb.verify_id_token.side_effect = Exception("invalid token")
+        mock_fb.verify_id_token.side_effect = InvalidIdTokenError("bad token")
         resp = client.get("/protected", headers=_auth_header("bad-token"))
     assert resp.status_code == 401
+    assert resp.headers.get("WWW-Authenticate") == "Bearer"
+
+
+def test_unexpected_token_error_returns_500():
+    with (
+        patch("nexis.auth._init_firebase"),
+        patch("nexis.auth.firebase_auth") as mock_fb,
+    ):
+        mock_fb.verify_id_token.side_effect = RuntimeError("unexpected")
+        resp = client.get("/protected", headers=_auth_header("bad-token"))
+    assert resp.status_code == 500
 
 
 def test_valid_token_returns_current_user():
