@@ -1,11 +1,3 @@
-# Cloud Run Job — executes the Nexis pipeline asynchronously.
-#
-# Triggered by POST /api/jobs on the Cloud Run Service. Reads job config from
-# env var overrides injected at trigger time (JOB_ID, RESEARCH_PROMPT, etc.).
-# Writes results back to Firestore on completion.
-#
-# The image is initially set to a placeholder; the CI/CD workflow (deploy.yml)
-# updates it to the actual image on every push to master.
 resource "google_cloud_run_v2_job" "nexis" {
   name     = "nexis-job"
   location = var.region
@@ -20,7 +12,7 @@ resource "google_cloud_run_v2_job" "nexis" {
       timeout         = "1800s"
 
       containers {
-        image = "us-docker.pkg.dev/cloudrun/container/hello"
+        image = "${var.region}-docker.pkg.dev/${var.project_id}/ghcr-remote/lukasz-zimnoch/nexis:latest"
 
         # Override CMD to run the job runner instead of the API server
         command = ["uv", "run", "python", "-m", "nexis.job_runner"]
@@ -95,4 +87,10 @@ resource "google_cloud_run_v2_job" "nexis" {
     google_secret_manager_secret_version.tavily_api_key_placeholder,
     google_secret_manager_secret_version.langchain_api_key_placeholder,
   ]
+
+  # CI/CD updates the image on every push; ignore template changes so Terraform
+  # never reverts the image or any other CI/CD-managed container config.
+  lifecycle {
+    ignore_changes = [template]
+  }
 }

@@ -1,7 +1,3 @@
-# Cloud Run Service — serves the FastAPI backend and the React SPA.
-#
-# The image is initially set to a placeholder; the CI/CD workflow (deploy.yml)
-# updates it to the actual image on every push to master.
 resource "google_cloud_run_v2_service" "nexis" {
   name     = "nexis"
   location = var.region
@@ -22,7 +18,7 @@ resource "google_cloud_run_v2_service" "nexis" {
     timeout = "300s"
 
     containers {
-      image = "us-docker.pkg.dev/cloudrun/container/hello"
+      image = "${var.region}-docker.pkg.dev/${var.project_id}/ghcr-remote/lukasz-zimnoch/nexis:latest"
 
       ports {
         container_port = 8000
@@ -111,6 +107,12 @@ resource "google_cloud_run_v2_service" "nexis" {
     google_secret_manager_secret_version.tavily_api_key_placeholder,
     google_secret_manager_secret_version.langchain_api_key_placeholder,
   ]
+
+  # CI/CD updates the image on every push; ignore template changes so Terraform
+  # never reverts the image or any other CI/CD-managed container config.
+  lifecycle {
+    ignore_changes = [template]
+  }
 }
 
 # Allow unauthenticated invocations — public access is required for the SPA and API.
