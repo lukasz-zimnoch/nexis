@@ -70,8 +70,13 @@ resource "google_iam_workload_identity_pool_provider" "nexis_repo" {
   workload_identity_pool_provider_id = "nexis-repo"
   display_name                       = "Nexis Repo"
 
+  # `actor` and `aud` are mapped for richer audit trails in Cloud Logging; they
+  # are not used in the attribute_condition but are visible on principalSet
+  # bindings and in IAM access logs.
   attribute_mapping = {
     "google.subject"       = "assertion.sub"
+    "attribute.actor"      = "assertion.actor"
+    "attribute.aud"        = "assertion.aud"
     "attribute.repository" = "assertion.repository"
   }
 
