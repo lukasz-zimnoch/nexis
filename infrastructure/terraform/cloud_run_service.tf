@@ -40,11 +40,6 @@ resource "google_cloud_run_v2_service" "nexis" {
       }
 
       env {
-        name  = "FIREBASE_PROJECT_ID"
-        value = var.project_id
-      }
-
-      env {
         name  = "GCP_REGION"
         value = var.region
       }
