@@ -88,9 +88,16 @@ resource "google_cloud_run_v2_job" "nexis" {
     google_secret_manager_secret_version.langchain_api_key_placeholder,
   ]
 
-  # CI/CD updates the image on every push; ignore template changes so Terraform
-  # never reverts the image or any other CI/CD-managed container config.
+  # CI/CD updates the image on every push via `gcloud run jobs update --image`.
+  # Ignore only the image field so Terraform still owns env vars, resources,
+  # secrets, command, max_retries, timeout, and the service account — in
+  # particular the `command` override that distinguishes the Job from the
+  # Service image.
   lifecycle {
-    ignore_changes = [template]
+    ignore_changes = [
+      client,
+      client_version,
+      template[0].template[0].containers[0].image,
+    ]
   }
 }

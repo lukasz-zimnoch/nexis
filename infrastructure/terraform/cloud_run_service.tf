@@ -108,10 +108,16 @@ resource "google_cloud_run_v2_service" "nexis" {
     google_secret_manager_secret_version.langchain_api_key_placeholder,
   ]
 
-  # CI/CD updates the image on every push; ignore template changes so Terraform
-  # never reverts the image or any other CI/CD-managed container config.
+  # CI/CD updates the image on every push via `deploy-cloudrun@v2`. Ignore only
+  # the image and revision metadata fields the action touches so Terraform still
+  # owns env vars, scaling, resources, secrets, and the service account.
   lifecycle {
-    ignore_changes = [template]
+    ignore_changes = [
+      client,
+      client_version,
+      template[0].revision,
+      template[0].containers[0].image,
+    ]
   }
 }
 
