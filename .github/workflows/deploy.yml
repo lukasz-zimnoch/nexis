@@ -7,7 +7,6 @@ on:
     types: [completed]
 
 env:
-  REGION: us-central1
   IMAGE: us-central1-docker.pkg.dev/nexis-pipeline/ghcr-remote/${{ github.repository }}:${{ github.event.workflow_run.head_sha }}
 
 jobs:
@@ -26,22 +25,29 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_SA_EMAIL }}
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
       # Terraform owns every field on these two resources except the container
       # image — env vars, scaling, resources, secrets, service account, command,
-      # and timeout. Passing only `image` here makes a targeted API update that
-      # leaves everything else untouched.
+      # and timeout. Passing only `image` here makes a targeted API update
+      # that leaves everything else untouched. Region is intentionally omitted
+      # so Terraform stays the single source of truth; the action's default
+      # (`us-central1`) matches the Terraform-managed region.
+      #
+      # skip_default_labels: true prevents the action from stamping
+      # `managed-by=github-actions` and `commit-sha=<sha>` labels on every run.
+      # For jobs in particular the action uses `--labels` (not
+      # `--update-labels`), which would replace all labels on each deploy and
+      # clobber anything Terraform sets. Set on the service step too for
+      # symmetry and to avoid creating unmanaged drift.
       - name: Update Cloud Run Service image
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: nexis
           image: ${{ env.IMAGE }}
-          region: ${{ env.REGION }}
+          skip_default_labels: true
 
       - name: Update Cloud Run Job image
-        run: |
-          gcloud run jobs update nexis-job \
-            --image=${{ env.IMAGE }} \
-            --region=${{ env.REGION }}
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          job: nexis-job
+          image: ${{ env.IMAGE }}
+          skip_default_labels: true
