@@ -15,10 +15,9 @@ Workload Identity Federation. The script worked around idempotency by checking f
 — if a resource was changed or deleted outside the script, re-running it would not
 restore it correctly.
 
-Phase 3 adds Firebase Auth, Firestore, Cloud Run Jobs, and Secret Manager to the
-infrastructure. Managing this additional complexity imperatively makes the script
-significantly harder to maintain, debug, and reason about. A declarative tool that
-tracks desired state and computes diffs is warranted.
+Adding Firebase Auth, Firestore, Cloud Run Jobs, and Secret Manager to the
+infrastructure further increases the complexity the script must manage imperatively.
+A declarative tool that tracks desired state and computes diffs is warranted.
 
 ## Decision
 
