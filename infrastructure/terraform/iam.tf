@@ -28,11 +28,10 @@ resource "google_project_iam_member" "deploy_sa_user" {
   member  = "serviceAccount:${google_service_account.nexis_deploy.email}"
 }
 
-resource "google_project_iam_member" "deploy_ar_reader" {
-  project = var.project_id
-  role    = "roles/artifactregistry.reader"
-  member  = "serviceAccount:${google_service_account.nexis_deploy.email}"
-}
+# Note: the Cloud Run service agent (service-<PROJECT_NUMBER>@serverless-robot-prod.iam.gserviceaccount.com)
+# pulls images from Artifact Registry, not the deploy SA. The service agent is
+# granted `roles/artifactregistry.reader` automatically when the Cloud Run API
+# is enabled, so no explicit AR binding is needed for either service account.
 
 # ---------------------------------------------------------------------------
 # Runtime SA roles — used by Cloud Run Service and Job at runtime
