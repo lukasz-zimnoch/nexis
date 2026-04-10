@@ -26,24 +26,22 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_SA_EMAIL }}
 
-      - name: Deploy to Cloud Run
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # Terraform owns every field on these two resources except the container
+      # image — env vars, scaling, resources, secrets, service account, command,
+      # and timeout. Passing only `image` here makes a targeted API update that
+      # leaves everything else untouched.
+      - name: Update Cloud Run Service image
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: nexis
           image: ${{ env.IMAGE }}
           region: ${{ env.REGION }}
-          env_vars: |-
-            OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
-            TAVILY_API_KEY=${{ secrets.TAVILY_API_KEY }}
-            LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }}
-            LANGCHAIN_TRACING_V2=false
-            LANGCHAIN_PROJECT=nexis
-          env_vars_update_strategy: overwrite
-          flags: >-
-            --port=8000
-            --memory=2Gi
-            --cpu=1
-            --timeout=600
-            --min-instances=0
-            --max-instances=1
-            --no-allow-unauthenticated
+
+      - name: Update Cloud Run Job image
+        run: |
+          gcloud run jobs update nexis-job \
+            --image=${{ env.IMAGE }} \
+            --region=${{ env.REGION }}
