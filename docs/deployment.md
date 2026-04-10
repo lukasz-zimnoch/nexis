@@ -51,12 +51,6 @@ On first apply, note the outputs:
 | `wif_provider` | Set as `GCP_WIF_PROVIDER` in GitHub Actions secrets |
 | `service_url` | Public URL of the Cloud Run Service |
 
-If Firestore was already created outside Terraform (e.g. via the GCP Console), import it before applying:
-
-```bash
-terraform import google_firestore_database.nexis 'nexis-pipeline/(default)'
-```
-
 ### 4. Populate Secret Manager values
 
 Terraform creates the secret shells with placeholder values (`CHANGEME`). Replace them with real keys:

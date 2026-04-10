@@ -86,8 +86,8 @@ Run `gcloud` commands directly in CI/CD workflows to provision resources.
 ### Negative
 - New tooling dependency: operators must install Terraform (`>= 1.9`) locally
 - GCS state bucket must be created manually before `terraform init` (bootstrap step)
-- Existing resources (e.g., a pre-existing Firestore database) must be imported via
-  `terraform import` before Terraform can manage them
+- Existing resources must be imported via `terraform import` before Terraform
+  can manage them
 
 ### Trade-offs
 - Terraform HCL is less expressive than a general-purpose language, but it is

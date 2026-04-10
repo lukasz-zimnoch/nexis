@@ -1,6 +1,3 @@
-# If Firestore was already created in the project (e.g., via the GCP Console),
-# import it before applying:
-#   terraform import google_firestore_database.nexis 'nexis-pipeline/(default)'
 resource "google_firestore_database" "nexis" {
   project     = var.project_id
   name        = "(default)"
