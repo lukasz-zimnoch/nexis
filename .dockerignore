@@ -12,3 +12,5 @@ nexis_dev.db
 .claude/
 tests/
 docs/
+infrastructure/
+frontend/node_modules/
