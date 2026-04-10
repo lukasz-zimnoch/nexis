@@ -1,0 +1,21 @@
+# Terraform state — stored in GCS backend, never commit locally
+*.tfstate
+*.tfstate.*
+
+# Terraform working directory
+.terraform/
+.terraform.lock.hcl
+
+# Variable files often contain sensitive values
+*.tfvars
+*.tfvars.json
+
+# Override files (local development only)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Crash log
+crash.log
+crash.*.log
