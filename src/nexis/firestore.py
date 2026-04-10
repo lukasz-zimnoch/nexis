@@ -7,6 +7,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
+from google.cloud import firestore  # type: ignore[import-untyped]
+from google.cloud.firestore_v1.base_query import FieldFilter  # type: ignore[import-untyped]
 from pydantic import BaseModel
 
 
@@ -54,8 +56,6 @@ def get_firestore_client():
     """Return a shared Firestore client (created once, reused across calls)."""
     global _firestore_client
     if _firestore_client is None:
-        from google.cloud import firestore  # type: ignore[import-untyped]
-
         project_id = os.environ.get("GCP_PROJECT_ID")
         _firestore_client = firestore.Client(project=project_id)
     return _firestore_client
@@ -84,8 +84,8 @@ def list_jobs(client, user_id: str, limit: int = 20) -> list[JobRecord]:
     """List jobs for a user, ordered by created_at descending."""
     query = (
         client.collection(_JOBS_COLLECTION)
-        .where("user_id", "==", user_id)
-        .order_by("created_at", direction="DESCENDING")
+        .where(filter=FieldFilter("user_id", "==", user_id))
+        .order_by("created_at", direction=firestore.Query.DESCENDING)
         .limit(limit)
     )
     return [_deserialize_job(doc.to_dict()) for doc in query.stream()]
@@ -126,11 +126,8 @@ def _serialize_job(job: JobRecord) -> dict[str, Any]:
 
 
 def _deserialize_job(data: dict[str, Any]) -> JobRecord:
-    # Firestore may return DatetimeWithNanoseconds — normalise to datetime
-    for field in ("created_at", "started_at", "completed_at"):
-        val = data.get(field)
-        if val is not None and not isinstance(val, datetime):
-            data[field] = datetime.fromisoformat(str(val))
+    # DatetimeWithNanoseconds (returned by Firestore) is a datetime subclass —
+    # Pydantic accepts it as-is, no conversion needed.
     data["status"] = JobStatus(data["status"])
     data["config"] = JobConfig(**data["config"])
     return JobRecord(**data)
