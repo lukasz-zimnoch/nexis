@@ -116,8 +116,12 @@ alternative to Firestore.
 ### Negative
 - Firebase is a Google-specific dependency; migrating off Firebase Auth would require
   implementing a new auth layer and migrating user accounts
-- Email/password accounts must be created manually by the administrator via the
-  Firebase Console — there is no self-signup (by design for this closed tool)
+- Firebase Auth requires two manual bootstrap steps after `terraform apply`:
+  enabling email/password sign-in in the Firebase Console, and creating user
+  accounts. Neither is exposed by the Terraform provider for Spark-plan
+  projects (configuring `google_identity_platform_config` with sign-in methods
+  would upgrade the project to Blaze billing). This is acceptable as a
+  one-time setup for a closed internal tool.
 - Firestore does not support multi-field sorting without a composite index; the
   `(user_id ASC, created_at DESC)` index must be provisioned in Terraform
 
