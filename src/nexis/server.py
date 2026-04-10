@@ -128,4 +128,9 @@ if STATIC_DIR.is_dir():
     async def spa_fallback(full_path: str) -> FileResponse:
         if full_path.startswith("api/"):
             raise HTTPException(status_code=404)
+        # Serve an existing file directly (e.g. favicon.ico, robots.txt);
+        # fall back to index.html for all other paths so client-side routing works.
+        candidate = STATIC_DIR / full_path
+        if candidate.is_file():
+            return FileResponse(str(candidate))
         return FileResponse(str(STATIC_DIR / "index.html"))

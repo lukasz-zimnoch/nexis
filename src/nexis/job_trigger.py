@@ -30,6 +30,8 @@ def trigger_job_execution(job_id: str, config: JobConfig) -> None:
     overrides = run_v2.RunJobRequest.Overrides(
         container_overrides=[
             run_v2.RunJobRequest.Overrides.ContainerOverride(
+                # name="" applies the override to the primary container of the job
+                # template — valid as long as the job defines a single container.
                 env=[
                     run_v2.EnvVar(name="JOB_ID", value=job_id),
                     run_v2.EnvVar(name="RESEARCH_PROMPT", value=config.research_prompt),
@@ -45,4 +47,8 @@ def trigger_job_execution(job_id: str, config: JobConfig) -> None:
     )
 
     request = run_v2.RunJobRequest(name=job_path, overrides=overrides)
+    # run_job() returns an LRO but we intentionally do not wait for it — the
+    # Cloud Run Job execution is tracked via Firestore status updates written by
+    # job_runner.py.  Errors surfaced during the job's execution (e.g. container
+    # boot failures) will show up in Firestore as a `failed` status.
     client.run_job(request=request)
