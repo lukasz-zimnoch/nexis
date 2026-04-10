@@ -1,0 +1,22 @@
+# Terraform state — stored in GCS backend, never commit locally
+*.tfstate
+*.tfstate.*
+
+# Terraform working directory (but commit .terraform.lock.hcl — HashiCorp
+# recommends committing the dependency lockfile so `terraform init` resolves
+# to identical provider versions across operators and CI)
+.terraform/
+
+# Variable files often contain sensitive values
+*.tfvars
+*.tfvars.json
+
+# Override files (local development only)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Crash log
+crash.log
+crash.*.log

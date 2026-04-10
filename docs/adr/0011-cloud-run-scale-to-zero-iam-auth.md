@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | Accepted |
+| **Status** | Superseded by [ADR-0013](0013-cloud-run-jobs-async-pipeline.md) and [ADR-0014](0014-firebase-auth-firestore-persistence.md) |
 | **Date** | 2026-03-30 |
 | **Deciders** | Łukasz Zimnoch |
 
