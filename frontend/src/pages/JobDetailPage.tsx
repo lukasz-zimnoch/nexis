@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getJob, type JobRecord } from "../api/jobs";
+import { getJob, isActiveStatus, type JobRecord } from "../api/jobs";
 import StatusBadge from "../components/StatusBadge";
 import ReportView from "../components/ReportView";
+import { jsonEqual } from "../lib/equal";
+import { formatDate } from "../lib/format";
+import { usePoll } from "../lib/usePoll";
 
 const POLL_INTERVAL_MS = 5_000;
-
-function formatDate(value: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleString();
-}
 
 export default function JobDetailPage() {
   const { jobId } = useParams<{ jobId: string }>();
@@ -20,7 +18,7 @@ export default function JobDetailPage() {
     if (!jobId) return;
     try {
       const data = await getJob(jobId);
-      setJob(data);
+      setJob((prev) => (jsonEqual(prev, data) ? prev : data));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load job");
@@ -31,14 +29,7 @@ export default function JobDetailPage() {
     void refresh();
   }, [refresh]);
 
-  useEffect(() => {
-    if (!job) return;
-    if (job.status !== "pending" && job.status !== "running") return;
-    const id = window.setInterval(() => {
-      void refresh();
-    }, POLL_INTERVAL_MS);
-    return () => window.clearInterval(id);
-  }, [job, refresh]);
+  usePoll(job !== null && isActiveStatus(job.status), refresh, POLL_INTERVAL_MS);
 
   return (
     <div>

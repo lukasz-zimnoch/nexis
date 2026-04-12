@@ -1,14 +1,10 @@
 import { Link } from "react-router-dom";
 import type { JobRecord } from "../api/jobs";
+import { formatDate } from "../lib/format";
 import StatusBadge from "./StatusBadge";
 
 interface JobCardProps {
   job: JobRecord;
-}
-
-function formatDate(value: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleString();
 }
 
 export default function JobCard({ job }: JobCardProps) {

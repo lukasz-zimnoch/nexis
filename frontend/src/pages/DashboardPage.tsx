@@ -1,8 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createJob, listJobs, type JobConfig, type JobRecord } from "../api/jobs";
+import {
+  createJob,
+  isActiveStatus,
+  listJobs,
+  type JobConfig,
+  type JobRecord,
+} from "../api/jobs";
 import JobCard from "../components/JobCard";
 import JobForm from "../components/JobForm";
+import { jsonEqual } from "../lib/equal";
+import { usePoll } from "../lib/usePoll";
 
 const POLL_INTERVAL_MS = 10_000;
 
@@ -16,7 +24,7 @@ export default function DashboardPage() {
   const refresh = useCallback(async () => {
     try {
       const data = await listJobs();
-      setJobs(data);
+      setJobs((prev) => (jsonEqual(prev, data) ? prev : data));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load jobs");
@@ -27,18 +35,8 @@ export default function DashboardPage() {
     void refresh();
   }, [refresh]);
 
-  // Poll while any job is still in flight.
-  useEffect(() => {
-    if (!jobs) return;
-    const hasActive = jobs.some(
-      (j) => j.status === "pending" || j.status === "running",
-    );
-    if (!hasActive) return;
-    const id = window.setInterval(() => {
-      void refresh();
-    }, POLL_INTERVAL_MS);
-    return () => window.clearInterval(id);
-  }, [jobs, refresh]);
+  const hasActive = jobs?.some((j) => isActiveStatus(j.status)) ?? false;
+  usePoll(hasActive, refresh, POLL_INTERVAL_MS);
 
   async function handleCreate(config: JobConfig) {
     setSubmitting(true);
