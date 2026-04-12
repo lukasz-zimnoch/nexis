@@ -11,6 +11,8 @@ from google.cloud import firestore  # type: ignore[import-untyped]
 from google.cloud.firestore_v1.base_query import FieldFilter  # type: ignore[import-untyped]
 from pydantic import BaseModel
 
+from nexis.state import Report
+
 
 # ---------------------------------------------------------------------------
 # Enums and models
@@ -41,7 +43,7 @@ class JobRecord(BaseModel):
     started_at: datetime | None = None
     completed_at: datetime | None = None
     error: str | None = None
-    result: list[dict[str, Any]] | None = None
+    result: list[Report] | None = None
 
 
 # ---------------------------------------------------------------------------
