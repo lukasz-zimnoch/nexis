@@ -1,15 +1,15 @@
 import ReactMarkdown from "react-markdown";
-import type { JobResultItem } from "../api/jobs";
+import type { Report } from "../api/jobs";
 
 interface ReportViewProps {
-  result: JobResultItem[] | null;
+  result: Report[] | null;
 }
 
-function extractMarkdown(item: JobResultItem): string {
-  if (typeof item.markdown === "string") return item.markdown;
-  // Fallback: dump JSON inside a fenced block so the user can still see what
-  // came back even if the schema changes.
-  return "```json\n" + JSON.stringify(item, null, 2) + "\n```";
+function renderBody(report: Report) {
+  if (report.format === "json") {
+    return <pre>{report.content}</pre>;
+  }
+  return <ReactMarkdown>{report.content}</ReactMarkdown>;
 }
 
 export default function ReportView({ result }: ReportViewProps) {
@@ -18,10 +18,10 @@ export default function ReportView({ result }: ReportViewProps) {
   }
   return (
     <div className="report">
-      {result.map((item, index) => (
+      {result.map((report, index) => (
         <div key={index}>
-          {item.title ? <h2>{String(item.title)}</h2> : null}
-          <ReactMarkdown>{extractMarkdown(item)}</ReactMarkdown>
+          <h2>{report.title}</h2>
+          {renderBody(report)}
           {index < result.length - 1 ? <hr /> : null}
         </div>
       ))}

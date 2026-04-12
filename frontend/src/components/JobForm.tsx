@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import type { JobConfig } from "../api/jobs";
+import type { JobConfig, OutputFormat } from "../api/jobs";
 
 interface JobFormProps {
   onSubmit: (config: JobConfig) => Promise<void> | void;
@@ -97,7 +97,9 @@ export default function JobForm({ onSubmit, submitting }: JobFormProps) {
             id="output_format"
             className="input"
             value={config.output_format}
-            onChange={(e) => update("output_format", e.target.value)}
+            onChange={(e) =>
+              update("output_format", e.target.value as OutputFormat)
+            }
           >
             <option value="markdown">Markdown</option>
             <option value="json">JSON</option>
