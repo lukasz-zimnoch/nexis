@@ -1,4 +1,3 @@
-# --- Stage 1: build the React SPA ---
 FROM node:20-slim AS frontend-build
 
 WORKDIR /frontend
@@ -11,7 +10,6 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-# --- Stage 2: Python app ---
 FROM python:3.11-slim AS app
 
 WORKDIR /app
