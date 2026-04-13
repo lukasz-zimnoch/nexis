@@ -25,7 +25,7 @@ const sampleJob: JobRecord = {
 describe("JobCard", () => {
   it("renders the prompt, status, and config summary", () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <JobCard job={sampleJob} />
       </MemoryRouter>,
     );
