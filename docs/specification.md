@@ -46,6 +46,7 @@ The pipeline consists of four layers: Deep Research (idea generation), Parallel 
 - **Typed contracts:** All agent inputs/outputs are Pydantic models. Malformed output triggers structured retry, not silent failure.
 - **Composability:** Each layer is an independently testable subgraph. Layers can be swapped, extended, or bypassed.
 - **Observability:** Every node emits structured logs. LangSmith integration for tracing, latency tracking, and cost attribution.
+- **Async execution model:** The UI triggers jobs via the API; the pipeline runs out-of-band in a Cloud Run Job and writes results to Firestore. The UI polls for completion.
 
 ### 2.2 High-Level Flow
 
@@ -57,6 +58,8 @@ The system executes as a directed acyclic graph (DAG) with four sequential layer
 4. **Layer 4 — Validation & Output:** A Devil's Advocate agent adversarially stress-tests each plan. A Report Generator produces the final deliverable with idea cards, scores, plans, and rebuttals.
 
 *Conditional retry: If all ideas in Layer 2 score below the minimum threshold, the graph routes back to Layer 1 with a refined research query. Maximum 2 retries before forcing output of best available results.*
+
+End users interact with the pipeline through a React SPA served by the FastAPI container. The API authenticates requests via Firebase ID tokens, persists each job to Firestore, and triggers a Cloud Run Job execution that runs the pipeline described above. See §3.6 for the service/job surface.
 
 ---
 
@@ -114,6 +117,16 @@ The final layer stress-tests plans and generates the deliverable. Fully autonomo
 |---|---|---|---|
 | **Devil's Advocate** | Adversarial review. Challenges every plan: "What if a big player copies this in 2 weeks?" Forces plans to address weaknesses or get downranked. | In: `BusinessPlan` · Out: `Rebuttal` | LLM |
 | **Report Generator** | Formats all artifacts into a structured deliverable: markdown or JSON report with idea cards, scores, MVP specs, GTM plans, and rebuttals. | In: `PipelineState` (full) · Out: `Report` (markdown/JSON) | Jinja2 templates |
+
+### 3.6 Service Layer and Job Execution
+
+Beyond the LangGraph pipeline itself, the system exposes a small web surface that lets authenticated users submit jobs and read back results:
+
+- **FastAPI Service** (`src/nexis/server.py`) — serves three JSON endpoints (`POST /api/jobs`, `GET /api/jobs`, `GET /api/jobs/{id}`) plus `GET /health` and the built React SPA (mounted from `frontend/dist/`). All `/api/*` endpoints require a Firebase ID token, verified by `src/nexis/auth.py`.
+- **Firestore** (`src/nexis/firestore.py`) — the `jobs/` collection holds `JobRecord` documents (`id`, `user_id`, `status`, `config`, `created_at`, `started_at`, `completed_at`, `error`, `result`). The Service writes the initial `pending` record; the Cloud Run Job updates status and writes the final result.
+- **Cloud Run Job** (`src/nexis/job_runner.py`) — invoked as `python -m nexis.job_runner`. Reads `JOB_ID` and per-run pipeline parameters from env overrides, builds the graph with MemorySaver, invokes it, and persists the resulting `list[Report]` on success (or an `error` string on failure).
+- **Job Trigger** (`src/nexis/job_trigger.py`) — the Service calls `trigger_job_execution()`, which issues a `run_v2.RunJobRequest` with per-run env overrides for the primary container. The returned LRO is intentionally not awaited — progress is observed via Firestore status transitions written by `job_runner`.
+- **React SPA** (`frontend/`) — login page + dashboard + per-job detail page. Authenticates against Firebase, polls `/api/jobs*` while any job is in `pending`/`running` state, and renders the markdown report on completion.
 
 ---
 
@@ -349,6 +362,8 @@ Default threshold: **0.55** (configurable). Ideas scoring below this are dropped
 
 ## 7. Configuration
 
+### 7.1 PipelineConfig
+
 All pipeline behavior is controlled via a `PipelineConfig` Pydantic model passed at invocation time:
 
 | Parameter | Type | Default | Description |
@@ -363,6 +378,48 @@ All pipeline behavior is controlled via a `PipelineConfig` Pydantic model passed
 | `output_format` | `str` | `markdown` | Final report format: `markdown` \| `json` |
 | `llm_timeout` | `int` | `300` | Per-LLM-call timeout in seconds (enforced via `asyncio.wait_for`) |
 | `fallback_model` | `str` | `google/gemini-3-flash-preview` | Fallback model used when primary model times out (switched for remaining retries) |
+
+### 7.2 Environment Variables
+
+The backend and frontend both read configuration from environment variables. In Cloud Run, non-secret values come from Terraform (`infrastructure/terraform/cloud_run_service.tf`, `cloud_run_job.tf`); API keys come from Secret Manager. Locally, put the required entries in `.env` (see `.env.example`).
+
+**Backend — required (no default).** Must be set for both the Cloud Run Service and the Cloud Run Job:
+
+| Variable | Read in | Purpose |
+|---|---|---|
+| `OPENROUTER_API_KEY` | `src/nexis/agents/base.py` | OpenRouter API key for all LLM calls |
+| `TAVILY_API_KEY` | Tavily SDK (picked up from env) | Tavily web search API key |
+| `GCP_PROJECT_ID` | `src/nexis/auth.py`, `firestore.py`, `job_trigger.py` | GCP project ID; also used as the Firebase project ID by the Admin SDK |
+| `GCP_REGION` | `src/nexis/job_trigger.py` | Region of the Cloud Run Job (e.g. `us-central1`) |
+
+**Backend — optional (tracing).**
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `LANGCHAIN_TRACING_V2` | `false` | Enable LangSmith tracing |
+| `LANGCHAIN_API_KEY` | *(unset)* | Required only when `LANGCHAIN_TRACING_V2=true` |
+| `LANGCHAIN_PROJECT` | `nexis` | LangSmith project name |
+
+**Cloud Run Job overrides.** Set per-run by `job_trigger.trigger_job_execution()` via `run_v2.RunJobRequest` container overrides. The operator does not set these — they come from the `JobConfig` submitted to `POST /api/jobs`.
+
+| Variable | Default | Source |
+|---|---|---|
+| `JOB_ID` | *(required)* | Firestore document ID written by the Service |
+| `RESEARCH_PROMPT` | *(required)* | `JobConfig.research_prompt` |
+| `NUM_IDEAS` | `8` | `JobConfig.num_ideas` |
+| `TOP_K` | `3` | `JobConfig.top_k` |
+| `SCORE_THRESHOLD` | `0.55` | `JobConfig.score_threshold` |
+| `OUTPUT_FORMAT` | `markdown` | `JobConfig.output_format` |
+
+**Frontend — Vite build-time.** Resolved by Vite at build time; values from Firebase Console → Project settings → Your apps:
+
+| Variable |
+|---|
+| `VITE_FIREBASE_API_KEY` |
+| `VITE_FIREBASE_AUTH_DOMAIN` |
+| `VITE_FIREBASE_PROJECT_ID` |
+
+Do **not** set `FIREBASE_PROJECT_ID`; the Firebase Admin SDK is initialised from `GCP_PROJECT_ID` (the same GCP project hosts both). The Cloud Run Job name (`nexis-job`) is hardcoded in `job_trigger.py` and Terraform — it is not configurable per deployment.
 
 ---
 
@@ -411,7 +468,11 @@ Approximate per-run cost assuming 8 candidate ideas with 3 surviving to Layer 3 
 | Package Management | uv |
 | Configuration | Pydantic Settings with `.env` file support |
 | Report Generation | Jinja2 templates (markdown + JSON output) |
-| Deployment | Google Cloud Run via GitHub Actions CI/CD; image pushed to GHCR; Cloud Run IAM auth (`--no-allow-unauthenticated`), scale-to-zero |
+| Web UI | React 18 + Vite 5 + TypeScript; served as static assets by the FastAPI container |
+| Auth | Firebase Auth (email/password): Firebase Admin SDK server-side, Firebase Web SDK client-side |
+| Job State | Firestore (native mode), `jobs/` collection with a composite index on (`user_id`, `created_at desc`) |
+| Infrastructure as Code | Terraform with a GCS state backend |
+| Deployment | Google Cloud Run Service (API + SPA) and Cloud Run Job (pipeline). `--allow-unauthenticated` at the platform level; Firebase Auth enforced at the app level. Image built and pushed to GHCR by GitHub Actions, pulled via an Artifact Registry pull-through cache. |
 
 ---
 
@@ -421,15 +482,27 @@ Approximate per-run cost assuming 8 candidate ideas with 3 surviving to Layer 3 
 nexis/
 ├── docs/
 │   ├── specification.md           # This document
-│   └── adr/                       # Architecture Decision Records (11 ADRs)
-├── scripts/
-│   └── setup-gcp.sh               # One-time GCP project + Workload Identity setup
+│   ├── deployment.md              # Terraform + Firebase + Cloud Run runbook
+│   └── adr/                       # Architecture Decision Records (15 ADRs)
+├── infrastructure/
+│   └── terraform/                 # Declarative GCP infrastructure (ADR-0012)
+│       ├── main.tf                # Provider config + GCS state backend
+│       ├── variables.tf           # project_id, region, github_repo, billing_account_id
+│       ├── outputs.tf             # service_url, deploy_sa_email, wif_provider
+│       ├── apis.tf                # google_project_service enablement
+│       ├── artifact_registry.tf   # GHCR pull-through cache
+│       ├── iam.tf                 # Service accounts + Workload Identity Federation
+│       ├── secrets.tf             # Secret Manager shells (values populated manually)
+│       ├── firestore.tf           # Firestore DB + composite index
+│       ├── firebase.tf            # google_firebase_project
+│       ├── cloud_run_service.tf   # API + SPA service
+│       └── cloud_run_job.tf       # Pipeline runner job
 ├── .github/workflows/
-│   ├── ci.yml                     # Lint → Test → Build → Push to GHCR
-│   └── deploy.yml                 # Deploy to Cloud Run on CI success
+│   ├── ci.yml                     # Backend + frontend lint/test → build → push to GHCR
+│   └── deploy.yml                 # Update Cloud Run Service + Job image on CI success
+├── Dockerfile                     # Multi-stage: Node builds SPA → Python runtime
 ├── pyproject.toml
-├── .env.example
-├── langgraph.json                 # LangGraph Platform deployment config
+├── .env.example                   # Mandatory no-default backend env vars
 ├── CLAUDE.md                      # Claude Code development instructions
 ├── src/nexis/
 │   ├── __init__.py                # run_pipeline / arun_pipeline public API
@@ -438,7 +511,11 @@ nexis/
 │   ├── models.py                  # Per-agent model assignments (single source of truth)
 │   ├── state.py                   # PipelineState TypedDict + Pydantic models
 │   ├── graph.py                   # Parent graph (retry logic, supervisor, force-pass)
-│   ├── server.py                  # LangGraph Platform entry point
+│   ├── server.py                  # FastAPI: /api/jobs endpoints + SPA static serving
+│   ├── auth.py                    # Firebase ID token verification middleware
+│   ├── firestore.py               # JobRecord CRUD on the `jobs/` collection
+│   ├── job_runner.py              # Cloud Run Job entry point (python -m nexis.job_runner)
+│   ├── job_trigger.py             # Triggers Cloud Run Job from the Service
 │   ├── telemetry.py               # Structured logging for nodes and LLM calls
 │   ├── layers/
 │   │   ├── research.py            # Layer 1: trend scanning + idea generation
@@ -457,6 +534,22 @@ nexis/
 │   └── templates/
 │       ├── report.md.j2           # Markdown report template
 │       └── idea_card.md.j2        # Per-idea card template
+├── frontend/                      # React + Vite SPA (ADR-0015)
+│   ├── package.json
+│   ├── vite.config.ts             # Dev proxy: /api + /health → localhost:8000
+│   ├── tsconfig.json
+│   ├── index.html
+│   ├── .env.example               # Mandatory VITE_FIREBASE_* vars
+│   └── src/
+│       ├── main.tsx               # React entry point
+│       ├── App.tsx                # BrowserRouter + AuthProvider + routes
+│       ├── index.css
+│       ├── api/                   # client.ts (fetch + Bearer token), jobs.ts
+│       ├── auth/                  # firebase.ts, AuthContext.tsx, useAuth.ts
+│       ├── components/            # Layout, ProtectedRoute, JobCard, JobForm, ReportView, StatusBadge
+│       ├── pages/                 # LoginPage, DashboardPage, JobDetailPage
+│       ├── lib/                   # Shared utilities (polling hook, formatting, equality)
+│       └── test/                  # Vitest setup
 ├── tests/
 │   ├── conftest.py                # Shared fixtures
 │   ├── test_config.py             # PipelineConfig validation tests
@@ -464,6 +557,11 @@ nexis/
 │   ├── test_cli.py                # CLI argument parsing tests
 │   ├── test_graph.py              # Parent graph routing and retry tests
 │   ├── test_telemetry.py          # Node instrumentation logging tests
+│   ├── test_server.py             # FastAPI endpoint tests (auth dependency override)
+│   ├── test_auth.py               # Firebase token verification tests
+│   ├── test_firestore.py          # JobRecord CRUD tests (mocked client)
+│   ├── test_job_trigger.py        # Cloud Run Job trigger tests
+│   ├── test_job_runner.py         # Job runner happy-path + failure tests
 │   ├── test_agents/               # Per-agent unit tests (mocked LLM)
 │   ├── test_layers/               # Per-layer subgraph tests
 │   ├── test_tools/                # Search and trend tool tests
@@ -483,3 +581,4 @@ Potential enhancements for subsequent iterations:
 - **Automated validation:** After Layer 4, optionally trigger a Landing Page Generator agent that creates a simple validation page and a Distribution Agent that posts to relevant communities to test demand signal before any code is written.
 - **A2A protocol integration:** Expose each layer as an A2A-compatible agent, enabling external systems to invoke individual layers or swap in alternative implementations built with other frameworks.
 - **Tool enrichment:** Replace current LLM-only reviewer and validator agents with dedicated data-source integrations — e.g., market data APIs for the Market Analyst, Crunchbase for the Competitive Moat reviewer, regulatory databases for the Risk Assessor, and Google Trends / SimilarWeb for the Niche Validator. Add X/Twitter as an additional trend source alongside HN, ProductHunt, and Reddit.
+- **Push-based job completion:** Replace the SPA's polling loop with a Firestore real-time listener or a Cloud Run Service push endpoint, so the dashboard updates instantly when a Cloud Run Job finishes.
