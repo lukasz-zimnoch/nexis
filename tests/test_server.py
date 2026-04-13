@@ -62,6 +62,46 @@ def test_health():
 
 
 # ---------------------------------------------------------------------------
+# GET /config.json
+# ---------------------------------------------------------------------------
+
+
+def test_config_json_composes_from_env(monkeypatch):
+    monkeypatch.setenv("FIREBASE_API_KEY", "web-api-key")
+    monkeypatch.setenv("GCP_PROJECT_ID", "nexis-pipeline")
+    monkeypatch.delenv("FIREBASE_AUTH_DOMAIN", raising=False)
+
+    resp = client.get("/config.json")
+
+    assert resp.status_code == 200
+    assert resp.json() == {
+        "apiKey": "web-api-key",
+        "authDomain": "nexis-pipeline.firebaseapp.com",
+        "projectId": "nexis-pipeline",
+    }
+
+
+def test_config_json_respects_auth_domain_override(monkeypatch):
+    monkeypatch.setenv("FIREBASE_API_KEY", "web-api-key")
+    monkeypatch.setenv("GCP_PROJECT_ID", "nexis-pipeline")
+    monkeypatch.setenv("FIREBASE_AUTH_DOMAIN", "auth.example.com")
+
+    resp = client.get("/config.json")
+
+    assert resp.status_code == 200
+    assert resp.json()["authDomain"] == "auth.example.com"
+
+
+def test_config_json_returns_500_when_missing(monkeypatch):
+    monkeypatch.delenv("FIREBASE_API_KEY", raising=False)
+    monkeypatch.setenv("GCP_PROJECT_ID", "nexis-pipeline")
+
+    resp = client.get("/config.json")
+
+    assert resp.status_code == 500
+
+
+# ---------------------------------------------------------------------------
 # POST /api/jobs
 # ---------------------------------------------------------------------------
 

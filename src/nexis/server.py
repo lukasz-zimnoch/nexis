@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -52,6 +53,32 @@ STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# Firebase Web SDK config (no auth — values are public by design)
+# ---------------------------------------------------------------------------
+
+
+@app.get("/config.json")
+async def firebase_web_config() -> dict[str, str]:
+    """Runtime Firebase Web SDK config consumed by the SPA at bootstrap.
+
+    The three fields identify the Firebase project to the browser client;
+    actual auth is enforced by the backend ID-token check.
+    """
+    api_key = os.environ.get("FIREBASE_API_KEY")
+    project_id = os.environ.get("GCP_PROJECT_ID")
+    if not api_key or not project_id:
+        raise HTTPException(status_code=500, detail="Firebase config unavailable")
+    auth_domain = (
+        os.environ.get("FIREBASE_AUTH_DOMAIN") or f"{project_id}.firebaseapp.com"
+    )
+    return {
+        "apiKey": api_key,
+        "authDomain": auth_domain,
+        "projectId": project_id,
+    }
 
 
 # ---------------------------------------------------------------------------
