@@ -486,86 +486,28 @@ nexis/
 │   └── adr/                       # Architecture Decision Records (15 ADRs)
 ├── infrastructure/
 │   └── terraform/                 # Declarative GCP infrastructure (ADR-0012)
-│       ├── main.tf                # Provider config + GCS state backend
-│       ├── variables.tf           # project_id, region, github_repo, billing_account_id
-│       ├── outputs.tf             # service_url, deploy_sa_email, wif_provider
-│       ├── apis.tf                # google_project_service enablement
-│       ├── artifact_registry.tf   # GHCR pull-through cache
-│       ├── iam.tf                 # Service accounts + Workload Identity Federation
-│       ├── secrets.tf             # Secret Manager shells (values populated manually)
-│       ├── firestore.tf           # Firestore DB + composite index
-│       ├── firebase.tf            # google_firebase_project
-│       ├── cloud_run_service.tf   # API + SPA service
-│       └── cloud_run_job.tf       # Pipeline runner job
-├── .github/workflows/
-│   ├── ci.yml                     # Backend + frontend lint/test → build → push to GHCR
-│   └── deploy.yml                 # Update Cloud Run Service + Job image on CI success
+├── .github/workflows/             # CI (lint/test/build/push) and deploy workflows
+├── src/nexis/
+│   ├── layers/                    # Four LangGraph subgraphs (research, review, planning, output)
+│   ├── agents/                    # Per-agent LLM wrappers and shared BaseAgent
+│   ├── tools/                     # External tool integrations (Tavily search, trend scraping)
+│   └── templates/                 # Jinja2 templates for report generation
+├── frontend/                      # React + Vite SPA (ADR-0015)
+│   └── src/
+│       ├── api/                   # HTTP client (Firebase Bearer token injection) and typed job calls
+│       ├── auth/                  # Firebase Web SDK init, React auth context and hooks
+│       ├── components/            # Layout, protected routes, job cards, forms, report viewer
+│       ├── pages/                 # Login, dashboard, job detail
+│       ├── lib/                   # Shared utilities (polling hook, formatting helpers)
+│       └── test/                  # Vitest setup
+├── tests/
+│   ├── test_agents/               # Per-agent unit tests (mocked LLM)
+│   ├── test_layers/               # Per-layer subgraph tests
+│   └── test_tools/                # Search and trend tool tests
 ├── Dockerfile                     # Multi-stage: Node builds SPA → Python runtime
 ├── pyproject.toml
 ├── .env.example                   # Mandatory no-default backend env vars
 ├── CLAUDE.md                      # Claude Code development instructions
-├── src/nexis/
-│   ├── __init__.py                # run_pipeline / arun_pipeline public API
-│   ├── __main__.py                # CLI entry point (python -m nexis)
-│   ├── config.py                  # PipelineConfig settings
-│   ├── models.py                  # Per-agent model assignments (single source of truth)
-│   ├── state.py                   # PipelineState TypedDict + Pydantic models
-│   ├── graph.py                   # Parent graph (retry logic, supervisor, force-pass)
-│   ├── server.py                  # FastAPI: /api/jobs endpoints + SPA static serving
-│   ├── auth.py                    # Firebase ID token verification middleware
-│   ├── firestore.py               # JobRecord CRUD on the `jobs/` collection
-│   ├── job_runner.py              # Cloud Run Job entry point (python -m nexis.job_runner)
-│   ├── job_trigger.py             # Triggers Cloud Run Job from the Service
-│   ├── telemetry.py               # Structured logging for nodes and LLM calls
-│   ├── layers/
-│   │   ├── research.py            # Layer 1: trend scanning + idea generation
-│   │   ├── review.py              # Layer 2: Send() fan-out to 6 critics
-│   │   ├── planning.py            # Layer 3: MVP + GTM concurrent planning
-│   │   └── output.py              # Layer 4: validation + report generation
-│   ├── agents/
-│   │   ├── base.py                # BaseAgent (retry, structured output, timeout, OpenRouter)
-│   │   ├── research.py            # ResearchAgent, TrendScanner, NicheValidator
-│   │   ├── reviewers.py           # 6 critic agents + ReviewSynthesizer
-│   │   ├── planners.py            # MVPArchitect, GTMStrategist, BusinessPlanComposer
-│   │   └── validators.py          # DevilsAdvocate, ReportGenerator
-│   ├── tools/
-│   │   ├── search.py              # Tavily search wrapper with backoff
-│   │   └── trends.py              # Site-scoped trend scraper (HN, ProductHunt, Reddit)
-│   └── templates/
-│       ├── report.md.j2           # Markdown report template
-│       └── idea_card.md.j2        # Per-idea card template
-├── frontend/                      # React + Vite SPA (ADR-0015)
-│   ├── package.json
-│   ├── vite.config.ts             # Dev proxy: /api + /health → localhost:8000
-│   ├── tsconfig.json
-│   ├── index.html
-│   ├── .env.example               # Mandatory VITE_FIREBASE_* vars
-│   └── src/
-│       ├── main.tsx               # React entry point
-│       ├── App.tsx                # BrowserRouter + AuthProvider + routes
-│       ├── index.css
-│       ├── api/                   # client.ts (fetch + Bearer token), jobs.ts
-│       ├── auth/                  # firebase.ts, AuthContext.tsx, useAuth.ts
-│       ├── components/            # Layout, ProtectedRoute, JobCard, JobForm, ReportView, StatusBadge
-│       ├── pages/                 # LoginPage, DashboardPage, JobDetailPage
-│       ├── lib/                   # Shared utilities (polling hook, formatting, equality)
-│       └── test/                  # Vitest setup
-├── tests/
-│   ├── conftest.py                # Shared fixtures
-│   ├── test_config.py             # PipelineConfig validation tests
-│   ├── test_state.py              # Pydantic model tests
-│   ├── test_cli.py                # CLI argument parsing tests
-│   ├── test_graph.py              # Parent graph routing and retry tests
-│   ├── test_telemetry.py          # Node instrumentation logging tests
-│   ├── test_server.py             # FastAPI endpoint tests (auth dependency override)
-│   ├── test_auth.py               # Firebase token verification tests
-│   ├── test_firestore.py          # JobRecord CRUD tests (mocked client)
-│   ├── test_job_trigger.py        # Cloud Run Job trigger tests
-│   ├── test_job_runner.py         # Job runner happy-path + failure tests
-│   ├── test_agents/               # Per-agent unit tests (mocked LLM)
-│   ├── test_layers/               # Per-layer subgraph tests
-│   ├── test_tools/                # Search and trend tool tests
-│   └── test_integration.py        # Full pipeline smoke test (mocked + live)
 └── README.md
 ```
 
