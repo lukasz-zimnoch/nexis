@@ -45,11 +45,6 @@ resource "google_cloud_run_v2_service" "nexis" {
       }
 
       env {
-        name  = "CLOUD_RUN_JOB_NAME"
-        value = "nexis-job"
-      }
-
-      env {
         name  = "LANGCHAIN_TRACING_V2"
         value = "false"
       }
