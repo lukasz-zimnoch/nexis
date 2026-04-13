@@ -18,6 +18,7 @@ from nexis.firestore import (
     list_jobs,
     update_job_status,
 )
+from nexis.state import OutputFormat, Report
 
 
 # ---------------------------------------------------------------------------
@@ -93,11 +94,29 @@ def test_deserialize_with_completed_fields():
         "started_at": now,
         "completed_at": now,
         "error": None,
-        "result": [{"title": "Report 1"}],
+        "result": [
+            {
+                "title": "Report 1",
+                "generated_at": "2026-04-01T13:00:00+00:00",
+                "ideas_evaluated": 8,
+                "ideas_selected": 3,
+                "content": "# Report content",
+                "format": "markdown",
+            }
+        ],
     }
     job = _deserialize_job(data)
     assert job.status == JobStatus.completed
-    assert job.result == [{"title": "Report 1"}]
+    assert job.result is not None
+    assert len(job.result) == 1
+    assert job.result[0] == Report(
+        title="Report 1",
+        generated_at=datetime(2026, 4, 1, 13, 0, 0, tzinfo=timezone.utc),
+        ideas_evaluated=8,
+        ideas_selected=3,
+        content="# Report content",
+        format=OutputFormat.markdown,
+    )
 
 
 # ---------------------------------------------------------------------------

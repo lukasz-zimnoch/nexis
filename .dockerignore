@@ -13,3 +13,7 @@ nexis_dev.db
 tests/
 docs/
 infrastructure/
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/.env
