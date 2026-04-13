@@ -24,10 +24,12 @@ export async function apiFetch<T>(
   init: RequestInit = {},
 ): Promise<T> {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
     ...((init.headers as Record<string, string>) ?? {}),
     ...(await authHeader()),
   };
+  if (init.body) {
+    headers["Content-Type"] = "application/json";
+  }
 
   const response = await fetch(path, { ...init, headers });
 
