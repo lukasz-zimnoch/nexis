@@ -13,11 +13,11 @@ terraform {
   }
 
   # GCS backend — create the bucket manually before running `terraform init`:
-  #   gcloud storage buckets create gs://nexis-pipeline-tfstate \
-  #     --project=nexis-pipeline --location=us-central1 \
+  #   gcloud storage buckets create gs://nexis-ai-tfstate \
+  #     --project=nexis-ai --location=us-central1 \
   #     --uniform-bucket-level-access
   backend "gcs" {
-    bucket = "nexis-pipeline-tfstate"
+    bucket = "nexis-ai-tfstate"
     prefix = "terraform/state"
   }
 }

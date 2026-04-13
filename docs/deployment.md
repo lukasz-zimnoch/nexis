@@ -22,15 +22,15 @@ Relevant ADRs:
 
 - [Terraform](https://developer.hashicorp.com/terraform/install) `>= 1.9`
 - [`gcloud`](https://cloud.google.com/sdk/docs/install) CLI, authenticated (`gcloud auth login` and `gcloud auth application-default login`)
-- A GCP project (`nexis-pipeline` by default) with a billing account linked
+- A GCP project (`nexis-ai` by default) with a billing account linked
 
 ### 2. Create the Terraform state bucket
 
 Terraform expects the GCS backend bucket to exist before `terraform init`. Create it once:
 
 ```bash
-gcloud storage buckets create gs://nexis-pipeline-tfstate \
-  --project=nexis-pipeline \
+gcloud storage buckets create gs://nexis-ai-tfstate \
+  --project=nexis-ai \
   --location=us-central1 \
   --uniform-bucket-level-access
 ```
@@ -69,7 +69,7 @@ Terraform marks the project as Firebase-enabled (`google_firebase_project`) but 
 
 In the [Firebase Console](https://console.firebase.google.com/):
 
-1. Select the `nexis-pipeline` project
+1. Select the `nexis-ai` project
 2. **Authentication** → **Sign-in method**
 3. Enable **Email/Password** → **Save**
 
@@ -90,7 +90,7 @@ The React SPA fetches its Firebase Web SDK config from the backend's `/config.js
 
 In the [Firebase Console](https://console.firebase.google.com/):
 
-1. Select the `nexis-pipeline` project
+1. Select the `nexis-ai` project
 2. **Project settings** → **Your apps** → **Add app** → **Web** (`</>` icon)
 3. Pick a nickname (e.g. `nexis-web`); skip Firebase Hosting
 4. Copy the `apiKey` from the generated `firebaseConfig` snippet
