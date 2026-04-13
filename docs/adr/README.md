@@ -34,3 +34,22 @@ prompted them, the alternatives considered, and the trade-offs accepted.
 2. Fill in all sections
 3. Set status to `Proposed` until accepted by the team
 4. Add a row to the index table above
+
+## ADRs are append-only
+
+Once an ADR is `Accepted`, its Context, Decision, Considered Alternatives, and Consequences sections **must not be edited**. They are a historical record of the reasoning at the time of the decision, and their value comes from preserving that snapshot — later edits obscure when and why direction changed.
+
+The only permitted in-place edits on an accepted ADR are:
+
+- Typo and formatting fixes that do not change meaning
+- Flipping the **Status** field (e.g. `Accepted` → `Deprecated`, or `Accepted` → `Superseded by ADR-NNNN`)
+- Adding a one-line cross-reference to a newer ADR that supersedes or deprecates this one
+
+If the decision itself needs to change — the context evolved, a trade-off no longer holds, a new constraint appeared — do **not** rewrite the existing ADR. Instead:
+
+1. Write a new ADR that documents the new decision in its own Context/Decision/Consequences.
+2. Reference the old ADR from the new one (e.g. "Supersedes ADR-NNNN").
+3. Flip the old ADR's status to `Superseded by ADR-MMMM` and add a one-line pointer at the top.
+4. Update the index table's Status column.
+
+ADR-0011 is the canonical example in this repo.

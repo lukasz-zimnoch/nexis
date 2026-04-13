@@ -52,3 +52,11 @@ Brief description of the option.
 
 ### Trade-offs
 - Accepted trade-off and why it is acceptable
+
+<!--
+Reminder: once this ADR is accepted, its content becomes append-only.
+Do not rewrite Context/Decision/Consequences to reflect later changes —
+write a new ADR that supersedes this one and flip the Status field here.
+See docs/adr/README.md → "ADRs are append-only".
+-->
+
