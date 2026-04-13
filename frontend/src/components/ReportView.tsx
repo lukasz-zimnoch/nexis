@@ -19,7 +19,7 @@ export default function ReportView({ result }: ReportViewProps) {
   return (
     <div className="report">
       {result.map((report, index) => (
-        <div key={index}>
+        <div key={report.title}>
           <h2>{report.title}</h2>
           {renderBody(report)}
           {index < result.length - 1 ? <hr /> : null}
