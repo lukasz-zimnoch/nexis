@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 
 interface LocationState {
@@ -8,7 +8,6 @@ interface LocationState {
 
 export default function LoginPage() {
   const { user, signIn } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,7 +25,6 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await signIn(email, password);
-      navigate("/", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign-in failed");
     } finally {
