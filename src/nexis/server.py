@@ -39,7 +39,7 @@ graph = build_graph(checkpointer=None)
 # FastAPI app for Cloud Run
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="Nexis Pipeline")
+app = FastAPI(title="Nexis AI")
 
 # SPA static file directory (populated by Docker multi-stage build)
 STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"

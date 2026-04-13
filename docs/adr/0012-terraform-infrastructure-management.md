@@ -25,7 +25,7 @@ We adopt **Terraform** (HashiCorp, `hashicorp/google` provider `~> 7.0`) for all
 infrastructure management. The `infrastructure/terraform/` directory replaces
 `scripts/setup-gcp.sh`.
 
-State is stored in a GCS backend (`nexis-pipeline-tfstate` bucket, pre-created
+State is stored in a GCS backend (`nexis-ai-tfstate` bucket, pre-created
 manually once). Terraform manages: API enablement, Artifact Registry, IAM service
 accounts, Workload Identity Federation, Secret Manager secrets, Firestore, Cloud Run
 Service, and Cloud Run Job. CI/CD still handles image updates via
