@@ -1,4 +1,4 @@
-import { auth } from "../auth/firebase";
+import { getFirebaseAuth } from "../auth/firebase";
 
 export class ApiError extends Error {
   status: number;
@@ -11,7 +11,7 @@ export class ApiError extends Error {
 }
 
 async function authHeader(): Promise<Record<string, string>> {
-  const user = auth.currentUser;
+  const user = getFirebaseAuth().currentUser;
   if (!user) {
     throw new ApiError(401, "Not authenticated");
   }

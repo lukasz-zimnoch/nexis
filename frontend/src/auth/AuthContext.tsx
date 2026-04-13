@@ -11,7 +11,7 @@ import {
   signOut,
   type User,
 } from "firebase/auth";
-import { auth } from "./firebase";
+import { getFirebaseAuth } from "./firebase";
 
 export interface AuthContextValue {
   user: User | null;
@@ -30,6 +30,7 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
+  const auth = getFirebaseAuth();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +40,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setLoading(false);
     });
     return unsubscribe;
-  }, []);
+  }, [auth]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -52,7 +53,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         await signOut(auth);
       },
     }),
-    [user, loading],
+    [user, loading, auth],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
