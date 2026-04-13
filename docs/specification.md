@@ -122,11 +122,11 @@ The final layer stress-tests plans and generates the deliverable. Fully autonomo
 
 Beyond the LangGraph pipeline itself, the system exposes a small web surface that lets authenticated users submit jobs and read back results:
 
-- **FastAPI Service** (`src/nexis/server.py`) — serves three JSON endpoints (`POST /api/jobs`, `GET /api/jobs`, `GET /api/jobs/{id}`) plus `GET /health` and the built React SPA (mounted from `frontend/dist/`). All `/api/*` endpoints require a Firebase ID token, verified by `src/nexis/auth.py`.
+- **FastAPI Service** (`src/nexis/server.py`) — serves three JSON endpoints (`POST /api/jobs`, `GET /api/jobs`, `GET /api/jobs/{id}`), `GET /health`, `GET /config.json` (unauthenticated Firebase Web SDK config composed from backend env), and the built React SPA (mounted from `frontend/dist/`). All `/api/*` endpoints require a Firebase ID token, verified by `src/nexis/auth.py`.
 - **Firestore** (`src/nexis/firestore.py`) — the `jobs/` collection holds `JobRecord` documents (`id`, `user_id`, `status`, `config`, `created_at`, `started_at`, `completed_at`, `error`, `result`). The Service writes the initial `pending` record; the Cloud Run Job updates status and writes the final result.
 - **Cloud Run Job** (`src/nexis/job_runner.py`) — invoked as `python -m nexis.job_runner`. Reads `JOB_ID` and per-run pipeline parameters from env overrides, builds the graph with MemorySaver, invokes it, and persists the resulting `list[Report]` on success (or an `error` string on failure).
 - **Job Trigger** (`src/nexis/job_trigger.py`) — the Service calls `trigger_job_execution()`, which issues a `run_v2.RunJobRequest` with per-run env overrides for the primary container. The returned LRO is intentionally not awaited — progress is observed via Firestore status transitions written by `job_runner`.
-- **React SPA** (`frontend/`) — login page + dashboard + per-job detail page. Authenticates against Firebase, polls `/api/jobs*` while any job is in `pending`/`running` state, and renders the markdown report on completion.
+- **React SPA** (`frontend/`) — login page + dashboard + per-job detail page. At startup it fetches `/config.json` and initialises the Firebase Web SDK with the returned config, so no Firebase values are baked into the static bundle. Authenticates against Firebase, polls `/api/jobs*` while any job is in `pending`/`running` state, and renders the markdown report on completion.
 
 ---
 
@@ -389,13 +389,15 @@ The backend and frontend both read configuration from environment variables. In 
 |---|---|---|
 | `OPENROUTER_API_KEY` | `src/nexis/agents/base.py` | OpenRouter API key for all LLM calls |
 | `TAVILY_API_KEY` | Tavily SDK (picked up from env) | Tavily web search API key |
-| `GCP_PROJECT_ID` | `src/nexis/auth.py`, `firestore.py`, `job_trigger.py` | GCP project ID; also used as the Firebase project ID by the Admin SDK |
+| `GCP_PROJECT_ID` | `src/nexis/auth.py`, `firestore.py`, `job_trigger.py` | GCP project ID; also used as the Firebase project ID by the Admin SDK and as the Web SDK `projectId` returned by `/config.json` |
 | `GCP_REGION` | `src/nexis/job_trigger.py` | Region of the Cloud Run Job (e.g. `us-central1`) |
+| `FIREBASE_API_KEY` | `src/nexis/server.py` (`/config.json`) | Firebase Web SDK `apiKey`; served to the SPA at bootstrap. Safe to expose — real auth is enforced by the backend's ID-token check |
 
-**Backend — optional (tracing).**
+**Backend — optional.**
 
 | Variable | Default | Purpose |
 |---|---|---|
+| `FIREBASE_AUTH_DOMAIN` | `<GCP_PROJECT_ID>.firebaseapp.com` | Firebase Web SDK `authDomain`; override only if using a custom auth domain |
 | `LANGCHAIN_TRACING_V2` | `false` | Enable LangSmith tracing |
 | `LANGCHAIN_API_KEY` | *(unset)* | Required only when `LANGCHAIN_TRACING_V2=true` |
 | `LANGCHAIN_PROJECT` | `nexis` | LangSmith project name |
@@ -411,15 +413,9 @@ The backend and frontend both read configuration from environment variables. In 
 | `SCORE_THRESHOLD` | `0.55` | `JobConfig.score_threshold` |
 | `OUTPUT_FORMAT` | `markdown` | `JobConfig.output_format` |
 
-**Frontend — Vite build-time.** Resolved by Vite at build time; values from Firebase Console → Project settings → Your apps:
+**Frontend.** The SPA has no build-time env vars. At startup it fetches `/config.json` from the backend, which returns `{apiKey, authDomain, projectId}` composed from the backend env vars above. This keeps all Firebase config on the server side, managed by Terraform alongside the rest of the Cloud Run env.
 
-| Variable |
-|---|
-| `VITE_FIREBASE_API_KEY` |
-| `VITE_FIREBASE_AUTH_DOMAIN` |
-| `VITE_FIREBASE_PROJECT_ID` |
-
-Do **not** set `FIREBASE_PROJECT_ID`; the Firebase Admin SDK is initialised from `GCP_PROJECT_ID` (the same GCP project hosts both). The Cloud Run Job name (`nexis-job`) is hardcoded in `job_trigger.py` and Terraform — it is not configurable per deployment.
+Do **not** set `FIREBASE_PROJECT_ID`; the Firebase Admin SDK is initialised from `GCP_PROJECT_ID` (the same GCP project hosts both), and `/config.json` reuses it for the Web SDK `projectId`. The Cloud Run Job name (`nexis-job`) is hardcoded in `job_trigger.py` and Terraform — it is not configurable per deployment.
 
 ---
 

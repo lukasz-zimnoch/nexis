@@ -23,7 +23,7 @@ If all ideas in Layer 2 score below the threshold, the graph routes back to Laye
 ```bash
 uv sync
 cp .env.example .env
-# Fill in OPENROUTER_API_KEY and TAVILY_API_KEY
+# Fill in the required keys — see .env.example for the full list
 ```
 
 **Run tests:**
@@ -59,46 +59,18 @@ To override all agents with a single model for quick testing:
 uv run nexis --prompt "..." --model anthropic/claude-haiku-4.5
 ```
 
-### HTTP API
+### HTTP API and Web UI
 
-Start the server:
+The FastAPI server exposes an authenticated job API (`POST /api/jobs`, `GET /api/jobs`, `GET /api/jobs/{id}`) and serves the React SPA. All `/api/*` endpoints require a Firebase ID token; jobs run asynchronously in a Cloud Run Job and write results to Firestore. See [`docs/specification.md`](docs/specification.md) §3.6 for the full request/response shape and [`docs/deployment.md`](docs/deployment.md) for end-to-end setup.
+
+Local dev:
 
 ```bash
 uv run uvicorn nexis.server:app --host 0.0.0.0 --port 8000
+cd frontend && npm run dev    # Vite proxies /api, /health, /config.json to :8000
 ```
 
-Run the pipeline:
-
-```bash
-curl -X POST http://localhost:8000/run \
-  -H "Content-Type: application/json" \
-  -d '{
-    "research_prompt": "B2B SaaS tools for small construction companies",
-    "num_ideas": 8,
-    "top_k": 3,
-    "score_threshold": 0.55,
-    "output_format": "markdown"
-  }'
-```
-
-The response contains the generated reports:
-
-```json
-{
-  "reports": [
-    {
-      "title": "...",
-      "generated_at": "2025-01-15T12:00:00Z",
-      "ideas_evaluated": 8,
-      "ideas_selected": 3,
-      "content": "...",
-      "format": "markdown"
-    }
-  ]
-}
-```
-
-Health check:
+Health check (unauthenticated):
 
 ```bash
 curl http://localhost:8000/health
