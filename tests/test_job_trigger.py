@@ -14,7 +14,6 @@ from nexis.job_trigger import trigger_job_execution
 def gcp_env(monkeypatch):
     monkeypatch.setenv("GCP_PROJECT_ID", "test-project")
     monkeypatch.setenv("GCP_REGION", "us-central1")
-    monkeypatch.setenv("CLOUD_RUN_JOB_NAME", "nexis-job")
 
 
 def test_trigger_calls_run_job_with_correct_path():
