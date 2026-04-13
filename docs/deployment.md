@@ -84,7 +84,29 @@ In the Firebase Console:
 
 Users sign in via the web UI at `service_url` with these credentials. There is no self-signup (by design for a closed internal tool).
 
-### 7. GHCR package visibility
+### 7. Register the Firebase Web App and wire `FIREBASE_API_KEY`
+
+The React SPA fetches its Firebase Web SDK config from the backend's `/config.json` endpoint at startup, so the `apiKey` (and optionally a custom `authDomain`) must reach the Cloud Run Service as env vars. Terraform marks the project Firebase-enabled but does **not** create a Web App — that's a one-time console step.
+
+In the [Firebase Console](https://console.firebase.google.com/):
+
+1. Select the `nexis-pipeline` project
+2. **Project settings** → **Your apps** → **Add app** → **Web** (`</>` icon)
+3. Pick a nickname (e.g. `nexis-web`); skip Firebase Hosting
+4. Copy the `apiKey` from the generated `firebaseConfig` snippet
+
+Then supply it to Terraform (e.g. via `infrastructure/terraform/terraform.tfvars`, which is gitignored, or `TF_VAR_firebase_api_key`):
+
+```hcl
+firebase_api_key = "AIza..."
+# firebase_auth_domain = "auth.example.com"   # optional; defaults to <project_id>.firebaseapp.com
+```
+
+The `apiKey` is safe to expose in the browser — real auth is enforced by the backend's ID-token check — so it lives as a plain Cloud Run env var rather than in Secret Manager.
+
+For local development, set `FIREBASE_API_KEY` in `.env` alongside the other backend vars; `npm run dev` under Vite proxies `/config.json` to `localhost:8000`.
+
+### 8. GHCR package visibility
 
 Cloud Run pulls images through the `ghcr-remote` Artifact Registry pull-through cache. The upstream GHCR package must be **public**:
 

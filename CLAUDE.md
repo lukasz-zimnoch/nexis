@@ -32,7 +32,7 @@ All code paths (CLI, Cloud Run Service, Cloud Run Job) use `MemorySaver`. State 
 
 ## Frontend
 
-The SPA lives in `frontend/` (React + Vite, TypeScript). Auth uses the Firebase Web SDK; all API calls inject the Firebase ID token as a Bearer token via `frontend/src/api/client.ts`. Dashboard and detail pages poll `/api/jobs*` while any job is in `pending` or `running` state. The production build (`npm run build`) writes to `frontend/dist/`, which the FastAPI server mounts as static files. Vite proxies `/api` and `/health` to `localhost:8000` during local dev.
+The SPA lives in `frontend/` (React + Vite, TypeScript). Auth uses the Firebase Web SDK, which is bootstrapped at runtime from the backend's `/config.json` endpoint (`apiKey`, `authDomain`, `projectId`) — no Firebase values are baked into the static bundle. All API calls inject the Firebase ID token as a Bearer token via `frontend/src/api/client.ts`. Dashboard and detail pages poll `/api/jobs*` while any job is in `pending` or `running` state. The production build (`npm run build`) writes to `frontend/dist/`, which the FastAPI server mounts as static files. Vite proxies `/api`, `/health`, and `/config.json` to `localhost:8000` during local dev.
 
 ## Deployment
 

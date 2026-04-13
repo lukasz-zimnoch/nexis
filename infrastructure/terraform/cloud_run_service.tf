@@ -54,6 +54,23 @@ resource "google_cloud_run_v2_service" "nexis" {
         value = "nexis"
       }
 
+      # Firebase Web SDK config served by /config.json to the SPA at bootstrap.
+      # apiKey is safe to expose — real auth is enforced by the backend's
+      # ID-token check. authDomain defaults to <project_id>.firebaseapp.com
+      # in server.py when FIREBASE_AUTH_DOMAIN is unset.
+      env {
+        name  = "FIREBASE_API_KEY"
+        value = var.firebase_api_key
+      }
+
+      dynamic "env" {
+        for_each = var.firebase_auth_domain == "" ? [] : [1]
+        content {
+          name  = "FIREBASE_AUTH_DOMAIN"
+          value = var.firebase_auth_domain
+        }
+      }
+
       # API keys injected from Secret Manager
       env {
         name = "OPENROUTER_API_KEY"
