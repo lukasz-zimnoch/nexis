@@ -112,3 +112,15 @@ task description.
   creates drift risk as providers deprecate older versions. This is mitigated by
   centralizing all assignments in one file and documenting alternatives in inline
   comments.
+
+## Note (2026-08-14)
+
+The model IDs listed in this ADR record the assignments as of the decision date.
+They are not maintained here. `src/nexis/models.py` is the single source of truth
+for the current per-agent model assignments.
+
+The "Trade-offs" section above named provider version churn as the main drift
+risk. That risk materialised on 2026-08-14: every assignment moved to a newer
+version except `anthropic/claude-haiku-4.5`, which has no version 5. The decision
+this ADR records, specialize the model per agent and centralize the assignments
+in one file, is unchanged.

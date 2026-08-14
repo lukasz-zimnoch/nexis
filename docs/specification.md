@@ -377,7 +377,7 @@ All pipeline behavior is controlled via a `PipelineConfig` Pydantic model passed
 | `agent_models` | `dict[str, str]` | Per-agent defaults from `nexis/models.py` | Maps agent keys (e.g. `"research_agent"`, `"reviewer_market"`) to OpenRouter model IDs. All LLM calls are routed through OpenRouter — `OPENROUTER_API_KEY` must be set. |
 | `output_format` | `str` | `markdown` | Final report format: `markdown` \| `json` |
 | `llm_timeout` | `int` | `300` | Per-LLM-call timeout in seconds (enforced via `asyncio.wait_for`) |
-| `fallback_model` | `str` | `google/gemini-3-flash-preview` | Fallback model used when primary model times out (switched for remaining retries) |
+| `fallback_model` | `str` | `google/gemini-3.7-flash` | Fallback model used when primary model times out (switched for remaining retries) |
 
 ### 7.2 Environment Variables
 
@@ -429,7 +429,7 @@ Every node emits structured JSON events via the `nexis.telemetry` logger. Each e
 
 - **LLM validation failure:** Retry with error context appended to prompt (max 2 retries). On persistent failure, write partial result with `failure_reason` field populated.
 - **Tool failure (search, API):** Immediate first attempt, then exponential backoff (1s, 4s, 16s). On persistent failure, agent proceeds with available data and logs a warning.
-- **Timeout:** Per-LLM-call timeout configurable via `config.llm_timeout` (default 300s, enforced in `BaseAgent` via `asyncio.wait_for`). On timeout, the agent switches to `config.fallback_model` (default: `google/gemini-3-flash-preview`) for remaining retries. If all retries are exhausted, a partial result with `failure_reason` is returned.
+- **Timeout:** Per-LLM-call timeout configurable via `config.llm_timeout` (default 300s, enforced in `BaseAgent` via `asyncio.wait_for`). On timeout, the agent switches to `config.fallback_model` (default: `google/gemini-3.7-flash`) for remaining retries. If all retries are exhausted, a partial result with `failure_reason` is returned.
 - **Full pipeline failure:** Failed runs are logged with full state snapshot for debugging.
 
 ---

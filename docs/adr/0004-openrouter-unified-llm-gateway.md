@@ -30,7 +30,7 @@ api_key=os.environ["OPENROUTER_API_KEY"]
 ```
 
 Model names use OpenRouter's provider-prefixed format (e.g.,
-`anthropic/claude-opus-4.6`, `openai/gpt-5.4`, `google/gemini-3-flash-preview`).
+`anthropic/claude-opus-5`, `openai/gpt-5.6-sol`, `google/gemini-3.7-flash`).
 Switching to a different model for any agent requires changing one line in
 `models.py`.
 
