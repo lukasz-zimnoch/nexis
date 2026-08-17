@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 
 from nexis.state import TrendSignal
 from nexis.tools.search import SearchTool
+from nexis.untrusted import sanitize_untrusted
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,9 @@ class TrendScraperTool:
                 return [
                     TrendSignal(
                         source=source_name,
-                        signal=r.get("title", r.get("content", "")[:120]),
+                        # The signal is web text that the report renders, so cap
+                        # it here as well as at the prompt.
+                        signal=sanitize_untrusted(r.get("title", r.get("content", ""))),
                         url=r.get("url", ""),
                         timestamp=datetime.now(tz=timezone.utc).isoformat(),
                     )
