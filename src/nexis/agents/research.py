@@ -11,6 +11,11 @@ from nexis.config import PipelineConfig
 from nexis.state import BusinessIdea, TrendSignal
 from nexis.tools.search import SearchTool
 from nexis.tools.trends import TrendScraperTool
+from nexis.untrusted import (
+    UNTRUSTED_DATA_RULE,
+    sanitize_untrusted,
+    wrap_untrusted,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +58,7 @@ class ResearchAgent(BaseAgent):
             system_prompt=(
                 "You are a research agent that generates innovative business ideas. "
                 "Generate structured business ideas based on the research prompt and "
-                "trend signals provided."
+                "trend signals provided.\n\n" + UNTRUSTED_DATA_RULE
             ),
             max_retries=max_retries,
             timeout=timeout,
@@ -70,7 +75,8 @@ class ResearchAgent(BaseAgent):
         """Search for web context then call LLM to generate ideas."""
         search_results = await self._search.search(research_prompt, max_results=5)
         search_context = "\n".join(
-            f"- {r.get('title', '')}: {r.get('content', '')[:200]}"
+            f"- {sanitize_untrusted(r.get('title', ''))}: "
+            f"{sanitize_untrusted(r.get('content', ''))}"
             for r in search_results
         )
 
@@ -78,7 +84,9 @@ class ResearchAgent(BaseAgent):
             "research_prompt": research_prompt,
             "num_ideas_requested": config.num_ideas,
             "trend_signals": trend_signals,
-            "web_search_context": search_context or "(no search results available)",
+            "web_search_context": wrap_untrusted(search_context)
+            if search_context
+            else "(no search results available)",
         }
 
         result = await super().invoke(input_data)
@@ -100,7 +108,8 @@ class TrendScanner(BaseAgent):
             output_schema=TrendScannerOutput,
             system_prompt=(
                 "You are a trend scanner. Analyze the provided web search results and "
-                "extract meaningful trend signals relevant to the research domain."
+                "extract meaningful trend signals relevant to the research domain.\n\n"
+                + UNTRUSTED_DATA_RULE
             ),
             max_retries=max_retries,
             timeout=timeout,
@@ -114,10 +123,18 @@ class TrendScanner(BaseAgent):
     ) -> TrendScannerOutput:
         """Scrape trend data then synthesize into structured signals."""
         raw_signals = await self._scraper.scrape(keywords)
+        raw_trend_data = "\n".join(
+            f"- source: {s.source}\n"
+            f"  signal: {sanitize_untrusted(s.signal)}\n"
+            f"  url: {sanitize_untrusted(s.url)}"
+            for s in raw_signals
+        )
 
         input_data = {
             "keywords": keywords,
-            "raw_trend_data": raw_signals,
+            "raw_trend_data": wrap_untrusted(raw_trend_data)
+            if raw_trend_data
+            else "(no trend data available)",
         }
 
         result = await super().invoke(input_data)
