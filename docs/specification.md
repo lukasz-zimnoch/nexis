@@ -45,7 +45,7 @@ The pipeline consists of four layers: Deep Research (idea generation), Parallel 
 - **Parallel evaluation:** Multiple critic agents review each idea concurrently, reducing wall-clock time.
 - **Typed contracts:** All agent inputs/outputs are Pydantic models. Malformed output triggers structured retry, not silent failure.
 - **Composability:** Each layer is an independently testable subgraph. Layers can be swapped, extended, or bypassed.
-- **Observability:** Every node emits structured logs. LangSmith integration for tracing, latency tracking, and cost attribution.
+- **Observability:** Every node emits structured JSON logs with its latency and, for each LLM call, the model and the token counts. Optional LangSmith integration traces the call chain.
 - **Async execution model:** The UI triggers jobs via the API; the pipeline runs out-of-band in a Cloud Run Job and writes results to Firestore. The UI polls for completion.
 
 ### 2.2 High-Level Flow
@@ -431,6 +431,7 @@ Every node emits structured JSON events via the `nexis.telemetry` logger. Each e
 - **Tool failure (search, API):** Immediate first attempt, then exponential backoff (1s, 4s, 16s). On persistent failure, agent proceeds with available data and logs a warning.
 - **Timeout:** Per-LLM-call timeout configurable via `config.llm_timeout` (default 300s, enforced in `BaseAgent` via `asyncio.wait_for`). On timeout, the agent switches to `config.fallback_model` (default: `google/gemini-3.7-flash`) for remaining retries. If all retries are exhausted, a partial result with `failure_reason` is returned.
 - **Full pipeline failure:** Failed runs are logged with full state snapshot for debugging.
+- **Job trigger failure:** The Service marks the job `failed` and returns 503. The stored `error` and the response body both carry a fixed message. The exception detail stays in the log, because the client can read `JobRecord.error`.
 
 ---
 

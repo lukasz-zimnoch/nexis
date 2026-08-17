@@ -18,7 +18,7 @@ Two categories of observability are needed:
 2. **Per-LLM-call metrics**: which model was called, how many tokens were used,
    whether parsing succeeded, what the latency was
 
-LangSmith (Anthropic's managed tracing service) is already integrated into
+LangSmith (LangChain's managed tracing service) is already integrated into
 LangGraph via environment variable (`LANGCHAIN_TRACING_V2=true`) and provides
 rich UI for visualizing LLM call chains. However, it requires an API key and
 sends trace data to an external service.
@@ -110,3 +110,7 @@ Write telemetry events to SQLite or PostgreSQL for aggregation and querying.
 - JSON logging captures timings and token counts but not full prompt/response
   content (to avoid log bloat). Prompt content is only available via LangSmith.
   For debugging output quality issues, LangSmith must be enabled.
+
+## Corrections
+
+- 2026-08-17: Context named LangSmith as Anthropic's service. It is LangChain's.

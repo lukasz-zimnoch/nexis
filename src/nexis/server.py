@@ -44,6 +44,8 @@ app = FastAPI(title="Nexis AI")
 # SPA static file directory (populated by Docker multi-stage build)
 STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
+JOB_START_FAILED_MESSAGE = "Failed to start job execution"
+
 
 # ---------------------------------------------------------------------------
 # Health endpoint (no auth)
@@ -106,10 +108,14 @@ async def create_job_endpoint(
 
     try:
         await asyncio.to_thread(trigger_job_execution, job_id, body)
-    except Exception as exc:
+    except Exception:
+        # The client reads JobRecord.error, and the exception text can carry
+        # project IDs, resource names or quota detail. Keep it in the log.
         logger.exception("Failed to trigger Cloud Run Job for %s", job_id)
-        update_job_status(fs_client, job_id, JobStatus.failed, error=str(exc))
-        raise HTTPException(status_code=503, detail="Failed to start job execution")
+        update_job_status(
+            fs_client, job_id, JobStatus.failed, error=JOB_START_FAILED_MESSAGE
+        )
+        raise HTTPException(status_code=503, detail=JOB_START_FAILED_MESSAGE)
 
     return job
 
@@ -144,20 +150,35 @@ async def get_job_endpoint(
 # SPA serving (registered LAST so API routes take priority)
 # ---------------------------------------------------------------------------
 
-if STATIC_DIR.is_dir():
+
+def register_spa_routes(app: FastAPI, static_dir: Path) -> None:
+    """Serve the built SPA from `static_dir`, which must exist.
+
+    A source checkout has no `frontend/dist`; only the Docker build creates it.
+    """
     app.mount(
         "/assets",
-        StaticFiles(directory=str(STATIC_DIR / "assets")),
+        StaticFiles(directory=str(static_dir / "assets")),
         name="assets",
     )
+    root = static_dir.resolve()
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def spa_fallback(full_path: str) -> FileResponse:
         if full_path.startswith("api/"):
             raise HTTPException(status_code=404)
+        # Starlette passes `full_path` already URL-decoded, so an encoded
+        # "../" arrives here as a real parent-directory step. Resolve the path
+        # and refuse anything that lands outside the SPA directory.
+        candidate = (root / full_path).resolve()
+        if not candidate.is_relative_to(root):
+            raise HTTPException(status_code=404)
         # Serve an existing file directly (e.g. favicon.ico, robots.txt);
         # fall back to index.html for all other paths so client-side routing works.
-        candidate = STATIC_DIR / full_path
         if candidate.is_file():
             return FileResponse(str(candidate))
-        return FileResponse(str(STATIC_DIR / "index.html"))
+        return FileResponse(str(root / "index.html"))
+
+
+if STATIC_DIR.is_dir():
+    register_spa_routes(app, STATIC_DIR)

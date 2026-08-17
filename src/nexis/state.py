@@ -115,6 +115,18 @@ class Challenge(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Shared field types
+# ---------------------------------------------------------------------------
+
+# ReviewSynthesizer multiplies score by confidence, so a value above 1.0 lets
+# one review outweigh the whole panel.
+Confidence = Annotated[
+    float,
+    Field(ge=0.0, le=1.0, description="Confidence score between 0.0 and 1.0"),
+]
+
+
+# ---------------------------------------------------------------------------
 # Core models
 # ---------------------------------------------------------------------------
 
@@ -126,7 +138,7 @@ class BusinessIdea(BaseModel):
     target_market: str
     revenue_model: str
     estimated_tam: str | None = None
-    confidence: float = Field(description="Confidence score between 0.0 and 1.0")
+    confidence: Confidence
     sources: list[str] = Field(default_factory=list)
     trend_signals: list[TrendSignal] = Field(default_factory=list)
     iteration: int = 0
@@ -139,7 +151,7 @@ class Review(BaseModel):
     score: int = Field(description="Score from 1 to 10")
     rationale: str
     red_flags: list[str] = Field(default_factory=list)
-    confidence: float = Field(description="Confidence score between 0.0 and 1.0")
+    confidence: Confidence
     failure_reason: str | None = None
 
     @field_validator("score")

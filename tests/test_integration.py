@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from nexis.config import PipelineConfig
+from nexis.models import AGENT_MODEL_KEYS
 from nexis.state import (
     BusinessPlan,
     Challenge,
@@ -146,16 +147,17 @@ async def test_live_pipeline():
     Live end-to-end test against real APIs.
     Excluded from default suite — run with:
         uv run pytest tests/test_integration.py -v -k live
-    Requires: ANTHROPIC_API_KEY, TAVILY_API_KEY
+    Requires: OPENROUTER_API_KEY, TAVILY_API_KEY
     """
     import os
 
-    if not os.getenv("ANTHROPIC_API_KEY") or not os.getenv("TAVILY_API_KEY"):
-        pytest.skip("Live test requires ANTHROPIC_API_KEY and TAVILY_API_KEY")
+    if not os.getenv("OPENROUTER_API_KEY") or not os.getenv("TAVILY_API_KEY"):
+        pytest.skip("Live test requires OPENROUTER_API_KEY and TAVILY_API_KEY")
 
     config = PipelineConfig(
         research_prompt="Find underserved SaaS opportunities for solo developers",
-        model_name="claude-haiku-4-5-20251001",  # cheapest model for live tests
+        # One cheap model for every agent keeps a live run affordable.
+        agent_models={k: "anthropic/claude-haiku-4.5" for k in AGENT_MODEL_KEYS},
         num_ideas=3,
         top_k=1,
         score_threshold=0.4,
