@@ -131,6 +131,42 @@ def test_review_score_bounds():
         )
 
 
+@pytest.mark.parametrize("bad_confidence", [5.0, 1.01, -0.1])
+def test_review_confidence_bounds(bad_confidence: float):
+    with pytest.raises(ValidationError):
+        Review(
+            idea_id="abc",
+            reviewer_role=ReviewerRole.risk,
+            score=7,
+            rationale="R",
+            confidence=bad_confidence,
+        )
+
+
+@pytest.mark.parametrize("bad_confidence", [5.0, 1.01, -0.1])
+def test_business_idea_confidence_bounds(bad_confidence: float):
+    with pytest.raises(ValidationError):
+        BusinessIdea(
+            title="T",
+            problem_statement="P",
+            target_market="M",
+            revenue_model="R",
+            confidence=bad_confidence,
+        )
+
+
+@pytest.mark.parametrize("edge_confidence", [0.0, 1.0])
+def test_confidence_accepts_bounds(edge_confidence: float):
+    review = Review(
+        idea_id="abc",
+        reviewer_role=ReviewerRole.risk,
+        score=7,
+        rationale="R",
+        confidence=edge_confidence,
+    )
+    assert review.confidence == edge_confidence
+
+
 def test_enum_values():
     assert ReviewerRole.market.value == "market"
     assert ReviewerRole.ai_resilience.value == "ai_resilience"
