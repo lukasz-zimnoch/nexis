@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from nexis.auth import CurrentUser, get_current_user
 from nexis.firestore import JobConfig, JobRecord, JobStatus
-from nexis.server import app, register_spa_routes
+from nexis.server import JOB_START_FAILED_MESSAGE, app, register_spa_routes
 
 # ---------------------------------------------------------------------------
 # Override auth dependency for all tests
@@ -150,6 +150,23 @@ def test_create_job_returns_503_when_trigger_fails():
     mock_update_status.assert_called_once()
     _, kwargs = mock_update_status.call_args
     assert kwargs.get("error") is not None
+
+
+def test_create_job_hides_trigger_exception_text():
+    with (
+        patch("nexis.server.get_firestore_client"),
+        patch("nexis.server.create_job"),
+        patch("nexis.server.update_job_status") as mock_update_status,
+        patch(
+            "nexis.server.trigger_job_execution",
+            side_effect=RuntimeError("project nexis-ai quota exceeded"),
+        ),
+    ):
+        resp = client.post("/api/jobs", json={"research_prompt": "Test prompt"})
+
+    assert "quota exceeded" not in resp.text
+    _, kwargs = mock_update_status.call_args
+    assert kwargs["error"] == JOB_START_FAILED_MESSAGE
 
 
 def test_create_job_triggers_with_job_id(sample_job_record: JobRecord):

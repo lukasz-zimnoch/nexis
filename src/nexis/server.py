@@ -44,6 +44,8 @@ app = FastAPI(title="Nexis AI")
 # SPA static file directory (populated by Docker multi-stage build)
 STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
+JOB_START_FAILED_MESSAGE = "Failed to start job execution"
+
 
 # ---------------------------------------------------------------------------
 # Health endpoint (no auth)
@@ -106,10 +108,14 @@ async def create_job_endpoint(
 
     try:
         await asyncio.to_thread(trigger_job_execution, job_id, body)
-    except Exception as exc:
+    except Exception:
+        # The client reads JobRecord.error, and the exception text can carry
+        # project IDs, resource names or quota detail. Keep it in the log.
         logger.exception("Failed to trigger Cloud Run Job for %s", job_id)
-        update_job_status(fs_client, job_id, JobStatus.failed, error=str(exc))
-        raise HTTPException(status_code=503, detail="Failed to start job execution")
+        update_job_status(
+            fs_client, job_id, JobStatus.failed, error=JOB_START_FAILED_MESSAGE
+        )
+        raise HTTPException(status_code=503, detail=JOB_START_FAILED_MESSAGE)
 
     return job
 
