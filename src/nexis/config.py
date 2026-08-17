@@ -28,7 +28,7 @@ class PipelineConfig(BaseSettings):
     )
     output_format: Literal["markdown", "json"] = "markdown"
     llm_timeout: int = 300
-    fallback_model: str = "google/gemini-3-flash-preview"
+    fallback_model: str = "google/gemini-3.7-flash"
 
     @model_validator(mode="after")
     def validate_weights_sum(self) -> "PipelineConfig":
