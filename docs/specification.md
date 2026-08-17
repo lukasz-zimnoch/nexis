@@ -22,7 +22,7 @@
 6. [Scoring and Filtering](#6-scoring-and-filtering)
 7. [Configuration](#7-configuration)
 8. [Observability and Error Handling](#8-observability-and-error-handling)
-9. [Cost Estimation](#9-cost-estimation)
+9. [Run Call Volume](#9-run-call-volume)
 10. [Technology Stack](#10-technology-stack)
 11. [Project Structure](#11-project-structure)
 12. [Future Extensions](#12-future-extensions)
@@ -434,19 +434,23 @@ Every node emits structured JSON events via the `nexis.telemetry` logger. Each e
 
 ---
 
-## 9. Cost Estimation
+## 9. Run Call Volume
 
-Approximate per-run cost assuming 8 candidate ideas with 3 surviving to Layer 3 (actual cost depends on the configured model):
+Cost is driven by how many LLM calls a run makes. The call count follows from the pipeline shape and the `num_ideas` / `top_k` settings, so it holds regardless of which models are assigned.
 
-| Layer | LLM Calls | Est. Tokens | Est. Cost |
-|---|---|---|---|
-| Layer 1 (Research) | 3 agents | ~40K tokens | ~$0.30 |
-| Layer 2 (Review) | 8 × 6 + 1 = 49 calls | ~200K tokens | ~$1.50 |
-| Layer 3 (Planning) | 3 × 3 = 9 calls | ~60K tokens | ~$0.45 |
-| Layer 4 (Validation) | 3 + 1 = 4 calls | ~30K tokens | ~$0.25 |
-| **Total** | **~65 LLM calls** | **~370K tokens** | **~$2.80** |
+Assuming 8 candidate ideas with 3 surviving to Layer 3:
 
-*Note: Costs are approximate based on March 2026 Anthropic API pricing. Actual costs vary with prompt complexity and retry frequency. Tavily search costs are additional.*
+| Layer | LLM Calls |
+|---|---|
+| Layer 1 (Research) | 3 |
+| Layer 2 (Review) | 8 × 6 + 1 = 49 |
+| Layer 3 (Planning) | 3 × 3 = 9 |
+| Layer 4 (Validation) | 3 + 1 = 4 |
+| **Total** | **~65** |
+
+Retries add to this. A failed structured-output validation re-invokes the same agent, and a Layer 2 retry re-runs Layers 1 and 2 for the newly generated ideas.
+
+This specification does not price these calls. The per-call price depends on the model assigned to each agent and on that model's current OpenRouter rate, both of which change without any commit to this repository. See `nexis/models.py` for the current assignments and their prices. Tavily search is billed separately.
 
 ---
 
