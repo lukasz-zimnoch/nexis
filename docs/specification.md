@@ -431,6 +431,7 @@ Every node emits structured JSON events via the `nexis.telemetry` logger. Each e
 - **Tool failure (search, API):** Immediate first attempt, then exponential backoff (1s, 4s, 16s). On persistent failure, agent proceeds with available data and logs a warning.
 - **Timeout:** Per-LLM-call timeout configurable via `config.llm_timeout` (default 300s, enforced in `BaseAgent` via `asyncio.wait_for`). On timeout, the agent switches to `config.fallback_model` (default: `google/gemini-3.7-flash`) for remaining retries. If all retries are exhausted, a partial result with `failure_reason` is returned.
 - **Full pipeline failure:** Failed runs are logged with full state snapshot for debugging.
+- **Job trigger failure:** The Service marks the job `failed` and returns 503. The stored `error` and the response body both carry a fixed message. The exception detail stays in the log, because the client can read `JobRecord.error`.
 
 ---
 
