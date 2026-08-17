@@ -167,6 +167,28 @@ def test_confidence_accepts_bounds(edge_confidence: float):
     assert review.confidence == edge_confidence
 
 
+def test_business_idea_title_length_limit():
+    with pytest.raises(ValidationError):
+        BusinessIdea(
+            title="T" * 81,
+            problem_statement="P",
+            target_market="M",
+            revenue_model="R",
+            confidence=0.5,
+        )
+
+
+def test_business_idea_accepts_title_at_the_limit():
+    idea = BusinessIdea(
+        title="T" * 80,
+        problem_statement="P",
+        target_market="M",
+        revenue_model="R",
+        confidence=0.5,
+    )
+    assert len(idea.title) == 80
+
+
 def test_enum_values():
     assert ReviewerRole.market.value == "market"
     assert ReviewerRole.ai_resilience.value == "ai_resilience"

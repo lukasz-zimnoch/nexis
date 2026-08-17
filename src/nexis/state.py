@@ -133,7 +133,7 @@ Confidence = Annotated[
 
 class BusinessIdea(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
-    title: str
+    title: str = Field(max_length=80, description="Short descriptive title")
     problem_statement: str
     target_market: str
     revenue_model: str
