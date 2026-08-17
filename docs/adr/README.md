@@ -44,6 +44,9 @@ The only permitted in-place edits on an accepted ADR are:
 - Typo and formatting fixes that do not change meaning
 - Flipping the **Status** field (e.g. `Accepted` → `Deprecated`, or `Accepted` → `Superseded by ADR-NNNN`)
 - Adding a one-line cross-reference to a newer ADR that supersedes or deprecates this one
+- Correcting a statement of fact that was wrong when written, such as a misnamed product or a wrong figure
+
+The convention protects the **decision**, not a factual error. A wrong fact preserves nothing worth keeping and misleads every later reader, so fix it in place and add a dated line under a `## Corrections` heading at the end of the file saying what the text said before. A changed decision is the other case: leave it alone and write a new ADR. ADR-0009 is the canonical example of a correction.
 
 If the decision itself needs to change — the context evolved, a trade-off no longer holds, a new constraint appeared — do **not** rewrite the existing ADR. Instead:
 
