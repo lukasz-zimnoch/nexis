@@ -119,7 +119,7 @@ class Challenge(BaseModel):
 # ---------------------------------------------------------------------------
 
 # ReviewSynthesizer multiplies score by confidence, so a value above 1.0 lets
-# one review outweigh the whole panel. Reject it at the contract instead.
+# one review outweigh the whole panel.
 Confidence = Annotated[
     float,
     Field(ge=0.0, le=1.0, description="Confidence score between 0.0 and 1.0"),

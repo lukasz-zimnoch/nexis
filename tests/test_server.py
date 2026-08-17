@@ -250,7 +250,7 @@ SECRET_TEXT = "server-side secret"
 
 @pytest.fixture
 def spa_client(tmp_path: Path) -> TestClient:
-    """Client for an app serving a throwaway SPA directory.
+    """Client for an app that serves a throwaway SPA directory.
 
     The real STATIC_DIR only exists after the frontend build, so the routes are
     registered here against a directory the test controls.

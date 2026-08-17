@@ -150,6 +150,7 @@ async def get_job_endpoint(
 # SPA serving (registered LAST so API routes take priority)
 # ---------------------------------------------------------------------------
 
+
 def register_spa_routes(app: FastAPI, static_dir: Path) -> None:
     """Serve the built SPA from `static_dir`, which must exist.
 
@@ -166,7 +167,7 @@ def register_spa_routes(app: FastAPI, static_dir: Path) -> None:
     async def spa_fallback(full_path: str) -> FileResponse:
         if full_path.startswith("api/"):
             raise HTTPException(status_code=404)
-        # Starlette hands over `full_path` already URL-decoded, so an encoded
+        # Starlette passes `full_path` already URL-decoded, so an encoded
         # "../" arrives here as a real parent-directory step. Resolve the path
         # and refuse anything that lands outside the SPA directory.
         candidate = (root / full_path).resolve()
