@@ -25,6 +25,7 @@ See the [specification](docs/specification.md) for full architecture, data contr
 - Agents must handle `failure_reason` fields gracefully — don't crash on partial results
 - Each layer subgraph must be independently testable without running the full pipeline
 - Async-first: all agent methods should be `async def` and use `asyncio.gather()` for concurrency
+- Web text reaches a prompt only through `src/nexis/untrusted.py`: sanitize each result, wrap it with `wrap_untrusted()`, and append `UNTRUSTED_DATA_RULE` to the agent's system prompt (ADR-0016, specification §5.7)
 
 ## Checkpointer
 

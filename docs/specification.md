@@ -47,6 +47,7 @@ The pipeline consists of four layers: Deep Research (idea generation), Parallel 
 - **Composability:** Each layer is an independently testable subgraph. Layers can be swapped, extended, or bypassed.
 - **Observability:** Every node emits structured JSON logs with its latency and, for each LLM call, the model and the token counts. Optional LangSmith integration traces the call chain.
 - **Async execution model:** The UI triggers jobs via the API; the pipeline runs out-of-band in a Cloud Run Job and writes results to Firestore. The UI polls for completion.
+- **Marked trust boundary:** Text that a tool fetched from the web enters a prompt as data inside explicit markers, with a size cap. See §5.7.
 
 ### 2.2 High-Level Flow
 
@@ -84,6 +85,8 @@ This layer is responsible for scanning external sources, identifying market oppo
 | **Research Agent** | Primary ideation. Performs web search, synthesizes trends, generates N candidate ideas with structured metadata. | In: research prompt, config · Out: `list[BusinessIdea]` | Tavily search, LLM |
 | **Trend Scanner** | Sub-agent. Monitors HN, ProductHunt, and Reddit for emerging patterns. Feeds real-time signals into Research Agent context. | In: keyword seeds · Out: `list[TrendSignal]` | Site-scoped Tavily search (HN, ProductHunt, Reddit), LLM |
 | **Niche Validator** | Pre-filter. Identifies obvious incumbents and removes duplicates from the candidate list. | In: `list[BusinessIdea]` · Out: `list[BusinessIdea]` (filtered) | LLM |
+
+The Research Agent and the Trend Scanner are the only agents that read text from the public web. That text enters their prompts as untrusted data under the rules in §5.7.
 
 ### 3.3 Layer 2 — Parallel Review Panel
 
@@ -326,6 +329,21 @@ All LLM-backed agents use LangChain's `with_structured_output()` to bind Pydanti
 ### 5.6 Checkpointing and Persistence
 
 The graph uses a `MemorySaver` checkpointer. State is held in memory for the duration of a single pipeline run and is not persisted across runs. This is appropriate for the Cloud Run execution model where each job runs to completion in an isolated container.
+
+### 5.7 Untrusted Web Content in Prompts
+
+Text that a tool fetched from the web is untrusted data. Text that an agent produced is pipeline data. This is the trust boundary; ADR-0016 records the decision and its limits.
+
+`src/nexis/untrusted.py` holds the boundary and every agent that reads web text uses it:
+
+- **Marked.** The text sits between `<<<UNTRUSTED_WEB_CONTENT>>>` and `<<<END_UNTRUSTED_WEB_CONTENT>>>`, never merged into the surrounding instructions.
+- **Cleaned.** Both markers and all control characters are removed from the text, so a page cannot forge a marker and close the block early.
+- **Capped.** Each result is cut to `MAX_UNTRUSTED_CHARS` (500) and the cut is noted in the text. `max_results` caps the number of results; this caps their size.
+- **Governed.** The system prompt of the agent carries one paragraph, `UNTRUSTED_DATA_RULE`, which names both markers and states that the text between them is data to analyze and never instructions to follow.
+
+`TrendScraperTool` applies the same cap to `TrendSignal.signal`, because Firestore stores that string and the report renders it.
+
+The rule is a convention, not a control: a model can still obey text inside the block. The block bounds what an attacker can spend and states the contract; it does not prove the model honours it.
 
 ---
 
