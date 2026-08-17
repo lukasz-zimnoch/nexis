@@ -40,7 +40,7 @@ TREND_SCANNER = "google/gemini-3.7-flash"
 # Alt: anthropic/claude-sonnet-5 (more reliable structured output, 5x the price)
 
 RESEARCH_AGENT = "anthropic/claude-opus-5"
-# Highest-leverage node — idea quality is set here.
+# Idea quality is set here, so this node decides the value of the whole run.
 # Anthropic reports Opus 5 about 3x above the next-best model on ARC-AGI 3,
 # which measures solving problems the model has not seen before, and about
 # 1.5x its pass rate on Zapier AutomationBench. Anthropic positions it for
@@ -54,7 +54,7 @@ NICHE_VALIDATOR = "anthropic/claude-haiku-4.5"
 # Sonnet 4.5 in Augment's agentic coding eval. That is far more capability
 # than a yes/no call needs, which is the point: Anthropic reports it 4-5x
 # faster than Sonnet 4.5 at 1.00/5.00.
-# Haiku has no version 5; 4.5 is the current small Claude model.  [A3] [P1]
+# Haiku has no version 5; 4.5 is the current small Claude model. [A3] [P1]
 # Alt: openai/gpt-5.6-luna (0.10/0.60, the cheapest model in the catalog)
 
 # ── Layer 2: Review Panel ────────────────────────────────────────────────────
@@ -64,7 +64,7 @@ REVIEWER_MARKET = "openai/gpt-5.6-terra"
 # OpenAI positions Terra as the balanced tier for everyday reasoning work,
 # between the Sol flagship and the high-volume Luna tier. Every reviewer emits
 # a score and a rationale that feed the weighted formula in ReviewSynthesizer,
-# so the cheap tier is not enough here.
+# so the Luna tier is not enough here.
 # Price 1.00/6.00, rising to 2.00/9.00 once a prompt passes 272k tokens.
 # [O1] [P1]
 # Alt: anthropic/claude-sonnet-5
