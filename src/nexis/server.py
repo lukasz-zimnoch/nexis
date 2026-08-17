@@ -144,20 +144,34 @@ async def get_job_endpoint(
 # SPA serving (registered LAST so API routes take priority)
 # ---------------------------------------------------------------------------
 
-if STATIC_DIR.is_dir():
+def register_spa_routes(app: FastAPI, static_dir: Path) -> None:
+    """Serve the built SPA from `static_dir`, which must exist.
+
+    A source checkout has no `frontend/dist`; only the Docker build creates it.
+    """
     app.mount(
         "/assets",
-        StaticFiles(directory=str(STATIC_DIR / "assets")),
+        StaticFiles(directory=str(static_dir / "assets")),
         name="assets",
     )
+    root = static_dir.resolve()
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def spa_fallback(full_path: str) -> FileResponse:
         if full_path.startswith("api/"):
             raise HTTPException(status_code=404)
+        # Starlette hands over `full_path` already URL-decoded, so an encoded
+        # "../" arrives here as a real parent-directory step. Resolve the path
+        # and refuse anything that lands outside the SPA directory.
+        candidate = (root / full_path).resolve()
+        if not candidate.is_relative_to(root):
+            raise HTTPException(status_code=404)
         # Serve an existing file directly (e.g. favicon.ico, robots.txt);
         # fall back to index.html for all other paths so client-side routing works.
-        candidate = STATIC_DIR / full_path
         if candidate.is_file():
             return FileResponse(str(candidate))
-        return FileResponse(str(STATIC_DIR / "index.html"))
+        return FileResponse(str(root / "index.html"))
+
+
+if STATIC_DIR.is_dir():
+    register_spa_routes(app, STATIC_DIR)

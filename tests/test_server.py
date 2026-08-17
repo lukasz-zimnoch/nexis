@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from nexis.auth import CurrentUser, get_current_user
 from nexis.firestore import JobConfig, JobRecord, JobStatus
-from nexis.server import app
+from nexis.server import app, register_spa_routes
 
 # ---------------------------------------------------------------------------
 # Override auth dependency for all tests
@@ -220,3 +222,63 @@ def test_get_job_returns_403_for_wrong_user(sample_job_record: JobRecord):
         resp = client.get("/api/jobs/job-001")
 
     assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# SPA serving
+# ---------------------------------------------------------------------------
+
+SECRET_TEXT = "server-side secret"
+
+
+@pytest.fixture
+def spa_client(tmp_path: Path) -> TestClient:
+    """Client for an app serving a throwaway SPA directory.
+
+    The real STATIC_DIR only exists after the frontend build, so the routes are
+    registered here against a directory the test controls.
+    """
+    static_dir = tmp_path / "dist"
+    (static_dir / "assets").mkdir(parents=True)
+    (static_dir / "index.html").write_text("<!doctype html><title>Nexis</title>")
+    (static_dir / "robots.txt").write_text("User-agent: *")
+    (tmp_path / "secret.txt").write_text(SECRET_TEXT)
+
+    spa_app = FastAPI()
+    register_spa_routes(spa_app, static_dir)
+    return TestClient(spa_app, raise_server_exceptions=False)
+
+
+def test_spa_fallback_serves_index_for_client_route(spa_client: TestClient):
+    resp = spa_client.get("/jobs/job-001")
+
+    assert resp.status_code == 200
+    assert "<title>Nexis</title>" in resp.text
+
+
+def test_spa_fallback_serves_existing_file(spa_client: TestClient):
+    resp = spa_client.get("/robots.txt")
+
+    assert resp.status_code == 200
+    assert resp.text == "User-agent: *"
+
+
+def test_spa_fallback_rejects_api_paths(spa_client: TestClient):
+    resp = spa_client.get("/api/unknown")
+
+    assert resp.status_code == 404
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/%2e%2e%2fsecret.txt",
+        "/%2e%2e%2f%2e%2e%2fsecret.txt",
+        "/assets/%2e%2e%2f%2e%2e%2fsecret.txt",
+    ],
+)
+def test_spa_fallback_rejects_encoded_traversal(spa_client: TestClient, path: str):
+    resp = spa_client.get(path)
+
+    assert resp.status_code == 404
+    assert SECRET_TEXT not in resp.text
