@@ -27,6 +27,7 @@ See the [specification](docs/specification.md) for full architecture, data contr
 - Async-first: all agent methods should be `async def` and use `asyncio.gather()` for concurrency
 - Web text reaches a prompt only through `src/nexis/untrusted.py`: sanitize each result, wrap it with `wrap_untrusted()`, and append `UNTRUSTED_DATA_RULE` to the agent's system prompt (ADR-0016, specification §5.7)
 - Every LLM call goes through `BaseAgent`, so it lands in the run totals. Open a run scope with `run_context()` at an entry point, and keep model prices in `src/nexis/pricing.py` (ADR-0017, specification §8.3)
+- Nothing under `tests/` may call a real model. Work that needs real answers belongs behind `python -m nexis.evals`, which is manual and spend-capped (ADR-0018, specification §6.4)
 
 ## Checkpointer
 
@@ -54,4 +55,16 @@ Design decisions are documented as ADRs in `docs/adr/`. Use the template at `doc
 - Layer tests live in `tests/test_layers/` — test subgraph routing and state transitions
 - `tests/test_integration.py` has a mocked smoke test (runs in CI) and a `@pytest.mark.live` test (real APIs, skipped in CI)
 - `tests/test_scoring_regression.py` freezes the weighted formula against `tests/evals/scoring_regression.json`. Change the weights or the formula and update the frozen values in the same commit
+- `tests/test_evals/` covers the eval harness with a stand-in reviewer, so it is free and runs in the normal CI job
 - Frontend tests use Vitest + React Testing Library under `frontend/src/**/__tests__/`; run with `cd frontend && npm test`
+
+## Evals
+
+The reviewer evals call real models and cost money, so they are manual. Collect first, then report:
+
+```bash
+uv run python -m nexis.evals collect --out eval-run --repeats 1 --max-usd 1.00
+uv run python -m nexis.evals report --run eval-run --min-hit-rate 0.7
+```
+
+`collect` refuses to start above `--max-usd`. Use `--repeats 5` to measure variance and `--model openai/gpt-5.6-luna` to debug the harness cheaply; never publish numbers from a run that used a stand-in model. `report` reads the collected directory, calls no API, and exits non-zero when a role misses the gate, so re-reading the same answers with different bands or thresholds is free. `.github/workflows/evals.yml` runs the same two commands and is `workflow_dispatch` only. See ADR-0018 and specification §6.4.
