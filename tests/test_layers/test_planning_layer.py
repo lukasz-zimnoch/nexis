@@ -134,6 +134,97 @@ async def test_planning_layer_populates_plans_for_two_ideas(
 
 
 @pytest.mark.asyncio
+async def test_planning_layer_survives_a_raising_branch(
+    sample_config,
+    sample_business_idea,
+    sample_review,
+    sample_mvp_plan,
+    sample_gtm_plan,
+):
+    """One raising planner must not sink the other branch or the whole layer."""
+    failed_mvp = sample_mvp_plan.model_copy(update={"failure_reason": "mvp exploded"})
+    business_plan = BusinessPlan(
+        idea_id=sample_business_idea.id,
+        executive_summary="Plan on a failed MVP",
+        key_assumptions=["assumption A"],
+        success_metrics=["metric A"],
+        mvp_plan=failed_mvp,
+        gtm_plan=sample_gtm_plan,
+    )
+
+    with (
+        patch("nexis.layers.planning.MVPArchitect") as MockMVP,
+        patch("nexis.layers.planning.GTMStrategist") as MockGTM,
+        patch("nexis.layers.planning.BusinessPlanComposer") as MockComposer,
+    ):
+        MockMVP.return_value.invoke_mvp = AsyncMock(
+            side_effect=RuntimeError("mvp exploded")
+        )
+        MockMVP.return_value.failure_result.return_value = failed_mvp
+        MockGTM.return_value.invoke_gtm = AsyncMock(return_value=sample_gtm_plan)
+        MockComposer.return_value.invoke_plan = AsyncMock(return_value=business_plan)
+
+        graph = build_planning_subgraph()
+        initial_state = _make_pipeline_state(
+            sample_config,
+            ideas=[sample_business_idea],
+            reviews=[sample_review],
+            top_ideas=[sample_business_idea.id],
+        )
+
+        result = await graph.ainvoke(initial_state)
+
+        MockMVP.return_value.failure_result.assert_called_once_with("mvp exploded")
+        composed = MockComposer.return_value.invoke_plan.await_args[0]
+
+    # The GTM branch ran to completion and the composer saw both plans.
+    assert composed[1] is failed_mvp
+    assert composed[2] is sample_gtm_plan
+    assert result["mvp_plans"][sample_business_idea.id].failure_reason == "mvp exploded"
+    assert result["gtm_plans"][sample_business_idea.id] == sample_gtm_plan
+    assert sample_business_idea.id in result["business_plans"]
+
+
+@pytest.mark.asyncio
+async def test_planning_layer_drops_an_idea_with_no_usable_result(
+    sample_config,
+    sample_business_idea,
+    sample_review,
+    sample_gtm_plan,
+):
+    """An agent that cannot state its own failure costs the idea, not the run."""
+    with (
+        patch("nexis.layers.planning.MVPArchitect") as MockMVP,
+        patch("nexis.layers.planning.GTMStrategist") as MockGTM,
+        patch("nexis.layers.planning.BusinessPlanComposer") as MockComposer,
+    ):
+        MockMVP.return_value.invoke_mvp = AsyncMock(
+            side_effect=RuntimeError("mvp exploded")
+        )
+        MockMVP.return_value.failure_result.side_effect = RuntimeError(
+            "cannot construct failure result"
+        )
+        MockGTM.return_value.invoke_gtm = AsyncMock(return_value=sample_gtm_plan)
+        MockComposer.return_value.invoke_plan = AsyncMock()
+
+        graph = build_planning_subgraph()
+        initial_state = _make_pipeline_state(
+            sample_config,
+            ideas=[sample_business_idea],
+            reviews=[sample_review],
+            top_ideas=[sample_business_idea.id],
+        )
+
+        result = await graph.ainvoke(initial_state)
+
+        MockComposer.return_value.invoke_plan.assert_not_called()
+
+    assert result["mvp_plans"] == {}
+    assert result["gtm_plans"] == {}
+    assert result["business_plans"] == {}
+
+
+@pytest.mark.asyncio
 async def test_planning_layer_empty_top_ideas_produces_no_plans(
     sample_config,
     sample_business_idea,

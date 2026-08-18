@@ -210,7 +210,7 @@ async def test_devils_advocate_failure_raises(
 ):
     """When the LLM always fails, DevilsAdvocate propagates a RuntimeError.
 
-    BaseAgent._failure_result() cannot construct a minimal Rebuttal because Severity
+    BaseAgent.failure_result() cannot construct a minimal Rebuttal because Severity
     is a required enum field and _minimal_value() returns None for it, which fails
     Pydantic validation. The base class then raises RuntimeError to signal the
     unrecoverable failure. Callers (e.g., devils_advocate_node) must handle this

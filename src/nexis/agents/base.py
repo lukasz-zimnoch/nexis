@@ -156,7 +156,7 @@ class BaseAgent:
             "%s exhausted all retries, returning failure result",
             self.__class__.__name__,
         )
-        return self._failure_result(last_error or "Unknown error")
+        return self.failure_result(last_error or "Unknown error")
 
     def _switch_to_fallback(self) -> None:
         """Switch to fallback model for remaining retries after a timeout."""
@@ -194,8 +194,12 @@ class BaseAgent:
                 parts.append(f"{key}: {value}")
         return "\n\n".join(parts)
 
-    def _failure_result(self, reason: str) -> T:
-        """Build a minimal valid instance with failure_reason set."""
+    def failure_result(self, reason: str) -> T:
+        """Build a minimal valid instance with failure_reason set.
+
+        Part of the agent contract: a caller that catches an error from a fan-out
+        branch builds the same shape of result the agent builds for itself.
+        """
         # Try to construct with failure_reason; fall back to a dict-based attempt
         schema = self.output_schema
         fields = schema.model_fields

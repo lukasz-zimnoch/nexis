@@ -53,7 +53,7 @@ async def devils_advocate_node(state: PipelineState) -> dict:
 
     rebuttals: dict = {}
     for plan, result in zip(plans, rebuttals_list):
-        if isinstance(result, Exception):
+        if isinstance(result, BaseException):
             logger.warning(
                 "DevilsAdvocate failed for idea %s: %s", plan.idea_id, result
             )

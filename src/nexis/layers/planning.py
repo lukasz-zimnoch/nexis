@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Any
 
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
 
+from nexis.agents.base import BaseAgent
 from nexis.agents.planners import BusinessPlanComposer, GTMStrategist, MVPArchitect
 from nexis.telemetry import instrument_node
 from nexis.state import BusinessIdea, PipelineState, Review
@@ -40,6 +42,30 @@ def route_to_planners(state: PipelineState) -> list[Send]:
     ]
 
 
+def _or_failure(result: Any, agent: BaseAgent, idea_id: str) -> Any:
+    """Turn a raised branch of the fan-out into a failure result.
+
+    BaseAgent.invoke() already answers a spent retry budget with a failure
+    result, so only an unexpected error arrives here. It must not sink the other
+    branch: the plan of one idea is worth more than a clean stack trace.
+
+    Returns None when the agent cannot even state its own failure, which happens
+    for a schema whose required fields have no minimal value.
+    """
+    if not isinstance(result, BaseException):
+        return result
+
+    agent_name = type(agent).__name__
+    logger.warning("%s failed for idea %s: %s", agent_name, idea_id, result)
+    try:
+        return agent.failure_result(str(result))
+    except Exception as exc:
+        logger.warning(
+            "%s cannot build a failure result for idea %s: %s", agent_name, idea_id, exc
+        )
+        return None
+
+
 async def plan_idea_node(state: PlanningNodeState) -> dict:
     """Run MVP + GTM planners concurrently, then compose the business plan."""
     idea_id: str = state["idea_to_plan_id"]
@@ -65,10 +91,16 @@ async def plan_idea_node(state: PlanningNodeState) -> dict:
         fallback_model=config.fallback_model,
     )
 
-    mvp, gtm = await asyncio.gather(
+    mvp_result, gtm_result = await asyncio.gather(
         mvp_architect.invoke_mvp(idea, idea_reviews),
         gtm_strategist.invoke_gtm(idea, idea_reviews),
+        return_exceptions=True,
     )
+    mvp = _or_failure(mvp_result, mvp_architect, idea_id)
+    gtm = _or_failure(gtm_result, gtm_strategist, idea_id)
+    if mvp is None or gtm is None:
+        logger.warning("Dropping idea %s: a planning branch left no result", idea_id)
+        return {}
 
     composer = BusinessPlanComposer(
         model_name=config.model_for("business_plan_composer"),

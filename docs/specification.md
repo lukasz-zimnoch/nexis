@@ -288,10 +288,13 @@ async def plan_idea_node(state: PlanningLayerState) -> dict:
     mvp_architect = MVPArchitect(model_name=config.model_for("mvp_architect"))
     gtm_strategist = GTMStrategist(model_name=config.model_for("gtm_strategist"))
 
-    mvp_plan, gtm_plan = await asyncio.gather(
+    mvp_result, gtm_result = await asyncio.gather(
         mvp_architect.invoke_mvp(idea, idea_reviews),
         gtm_strategist.invoke_gtm(idea, idea_reviews),
+        return_exceptions=True,
     )
+    mvp_plan = _or_failure(mvp_result, mvp_architect, idea_id)
+    gtm_plan = _or_failure(gtm_result, gtm_strategist, idea_id)
 
     composer = BusinessPlanComposer(model_name=config.model_for("business_plan_composer"))
     business_plan = await composer.invoke_plan(idea, mvp_plan, gtm_plan)
@@ -302,6 +305,8 @@ async def plan_idea_node(state: PlanningLayerState) -> dict:
         "business_plans": {idea_id: business_plan},
     }
 ```
+
+**One branch of a fan-out must never sink the others.** Every `asyncio.gather()` in the pipeline follows this rule, in one of two ways. Either the coroutine catches its own errors, as `TrendScraperTool` does per source, or the `gather()` passes `return_exceptions=True` and the caller handles each branch. Layer 3 turns a raised branch into a failure result through `BaseAgent.failure_result()`, which is the same partial result the agent builds for itself when it runs out of retries (ADR-0007). An agent whose schema has no minimal value cannot build that result; Layer 3 then drops the one idea and Layer 4 reports on the ideas that survived.
 
 ### 5.4 Conditional Retry Edge
 
