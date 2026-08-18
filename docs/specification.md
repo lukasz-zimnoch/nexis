@@ -531,6 +531,7 @@ nexis/
 │   ├── layers/                    # Four LangGraph subgraphs (research, review, planning, output)
 │   ├── agents/                    # Per-agent LLM wrappers and shared BaseAgent
 │   ├── tools/                     # External tool integrations (Tavily search, trend scraping)
+│   ├── evals/                     # Reviewer calibration and variance harness (ADR-0018)
 │   └── templates/                 # Jinja2 templates for report generation
 ├── frontend/                      # React + Vite SPA (ADR-0015)
 │   └── src/
@@ -543,7 +544,9 @@ nexis/
 ├── tests/
 │   ├── test_agents/               # Per-agent unit tests (mocked LLM)
 │   ├── test_layers/               # Per-layer subgraph tests
-│   └── test_tools/                # Search and trend tool tests
+│   ├── test_tools/                # Search and trend tool tests
+│   ├── test_evals/                # Eval harness tests (stand-in reviewer, no API)
+│   └── evals/                     # Frozen eval data: labelled dataset and scoring fixture
 ├── Dockerfile                     # Multi-stage: Node builds SPA → Python runtime
 ├── pyproject.toml
 ├── .env.example                   # Mandatory no-default backend env vars
