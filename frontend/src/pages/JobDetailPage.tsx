@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getJob, isActiveStatus, type JobRecord } from "../api/jobs";
 import StatusBadge from "../components/StatusBadge";
+import MetricsPanel from "../components/MetricsPanel";
 import ReportView from "../components/ReportView";
 import { jsonEqual } from "../lib/equal";
 import { formatDate } from "../lib/format";
@@ -69,6 +70,8 @@ export default function JobDetailPage() {
               <strong>Error:</strong> {job.error}
             </div>
           ) : null}
+
+          {job.metrics ? <MetricsPanel metrics={job.metrics} /> : null}
 
           {job.status === "completed" ? (
             <>
