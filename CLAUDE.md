@@ -53,4 +53,5 @@ Design decisions are documented as ADRs in `docs/adr/`. Use the template at `doc
 - Unit tests live in `tests/test_agents/` — test each agent in isolation with mocked LLM calls
 - Layer tests live in `tests/test_layers/` — test subgraph routing and state transitions
 - `tests/test_integration.py` has a mocked smoke test (runs in CI) and a `@pytest.mark.live` test (real APIs, skipped in CI)
+- `tests/test_scoring_regression.py` freezes the weighted formula against `tests/evals/scoring_regression.json`. Change the weights or the formula and update the frozen values in the same commit
 - Frontend tests use Vitest + React Testing Library under `frontend/src/**/__tests__/`; run with `cd frontend && npm test`

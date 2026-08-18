@@ -1,0 +1,297 @@
+{
+  "weights": {
+    "market": 0.25,
+    "technical": 0.2,
+    "financial": 0.2,
+    "moat": 0.15,
+    "risk": 0.1,
+    "ai_resilience": 0.1
+  },
+  "score_threshold": 0.55,
+  "top_k": 3,
+  "idea_ids": [
+    "idea-alpha",
+    "idea-zeta",
+    "idea-beta",
+    "idea-gamma",
+    "idea-delta",
+    "idea-epsilon"
+  ],
+  "reviews": [
+    {
+      "idea_id": "idea-alpha",
+      "reviewer_role": "market",
+      "score": 9,
+      "rationale": "market view of idea-alpha",
+      "red_flags": [],
+      "confidence": 0.9
+    },
+    {
+      "idea_id": "idea-alpha",
+      "reviewer_role": "technical",
+      "score": 8,
+      "rationale": "technical view of idea-alpha",
+      "red_flags": [],
+      "confidence": 0.85
+    },
+    {
+      "idea_id": "idea-alpha",
+      "reviewer_role": "financial",
+      "score": 8,
+      "rationale": "financial view of idea-alpha",
+      "red_flags": [],
+      "confidence": 0.8
+    },
+    {
+      "idea_id": "idea-alpha",
+      "reviewer_role": "moat",
+      "score": 7,
+      "rationale": "moat view of idea-alpha",
+      "red_flags": [],
+      "confidence": 0.75
+    },
+    {
+      "idea_id": "idea-alpha",
+      "reviewer_role": "risk",
+      "score": 6,
+      "rationale": "risk view of idea-alpha",
+      "red_flags": [],
+      "confidence": 0.7
+    },
+    {
+      "idea_id": "idea-alpha",
+      "reviewer_role": "ai_resilience",
+      "score": 8,
+      "rationale": "ai_resilience view of idea-alpha",
+      "red_flags": [],
+      "confidence": 0.9
+    },
+    {
+      "idea_id": "idea-zeta",
+      "reviewer_role": "market",
+      "score": 9,
+      "rationale": "market view of idea-zeta",
+      "red_flags": [],
+      "confidence": 0.85
+    },
+    {
+      "idea_id": "idea-zeta",
+      "reviewer_role": "technical",
+      "score": 8,
+      "rationale": "technical view of idea-zeta",
+      "red_flags": [],
+      "confidence": 0.9
+    },
+    {
+      "idea_id": "idea-zeta",
+      "reviewer_role": "financial",
+      "score": 9,
+      "rationale": "financial view of idea-zeta",
+      "red_flags": [],
+      "confidence": 0.8
+    },
+    {
+      "idea_id": "idea-zeta",
+      "reviewer_role": "moat",
+      "score": 6,
+      "rationale": "moat view of idea-zeta",
+      "red_flags": [],
+      "confidence": 0.8
+    },
+    {
+      "idea_id": "idea-zeta",
+      "reviewer_role": "risk",
+      "score": 7,
+      "rationale": "risk view of idea-zeta",
+      "red_flags": [],
+      "confidence": 0.8
+    },
+    {
+      "idea_id": "idea-zeta",
+      "reviewer_role": "ai_resilience",
+      "score": 6,
+      "rationale": "ai_resilience view of idea-zeta",
+      "red_flags": [],
+      "confidence": 0.7
+    },
+    {
+      "idea_id": "idea-beta",
+      "reviewer_role": "market",
+      "score": 8,
+      "rationale": "market view of idea-beta",
+      "red_flags": [],
+      "confidence": 0.9
+    },
+    {
+      "idea_id": "idea-beta",
+      "reviewer_role": "technical",
+      "score": 9,
+      "rationale": "technical view of idea-beta",
+      "red_flags": [],
+      "confidence": 0.8
+    },
+    {
+      "idea_id": "idea-beta",
+      "reviewer_role": "financial",
+      "score": 7,
+      "rationale": "financial view of idea-beta",
+      "red_flags": [],
+      "confidence": 0.85
+    },
+    {
+      "idea_id": "idea-beta",
+      "reviewer_role": "moat",
+      "score": 8,
+      "rationale": "moat view of idea-beta",
+      "red_flags": [],
+      "confidence": 0.7
+    },
+    {
+      "idea_id": "idea-beta",
+      "reviewer_role": "risk",
+      "score": 7,
+      "rationale": "risk view of idea-beta",
+      "red_flags": [],
+      "confidence": 0.75
+    },
+    {
+      "idea_id": "idea-beta",
+      "reviewer_role": "ai_resilience",
+      "score": 7,
+      "rationale": "ai_resilience view of idea-beta",
+      "red_flags": [],
+      "confidence": 0.8
+    },
+    {
+      "idea_id": "idea-gamma",
+      "reviewer_role": "market",
+      "score": 5,
+      "rationale": "market view of idea-gamma",
+      "red_flags": [],
+      "confidence": 0.6
+    },
+    {
+      "idea_id": "idea-gamma",
+      "reviewer_role": "technical",
+      "score": 6,
+      "rationale": "technical view of idea-gamma",
+      "red_flags": [],
+      "confidence": 0.5
+    },
+    {
+      "idea_id": "idea-gamma",
+      "reviewer_role": "financial",
+      "score": 4,
+      "rationale": "financial view of idea-gamma",
+      "red_flags": [],
+      "confidence": 0.6
+    },
+    {
+      "idea_id": "idea-gamma",
+      "reviewer_role": "moat",
+      "score": 3,
+      "rationale": "moat view of idea-gamma",
+      "red_flags": [],
+      "confidence": 0.5
+    },
+    {
+      "idea_id": "idea-gamma",
+      "reviewer_role": "risk",
+      "score": 5,
+      "rationale": "risk view of idea-gamma",
+      "red_flags": [],
+      "confidence": 0.4
+    },
+    {
+      "idea_id": "idea-gamma",
+      "reviewer_role": "ai_resilience",
+      "score": 3,
+      "rationale": "ai_resilience view of idea-gamma",
+      "red_flags": [],
+      "confidence": 0.5
+    },
+    {
+      "idea_id": "idea-delta",
+      "reviewer_role": "market",
+      "score": 8,
+      "rationale": "market view of idea-delta",
+      "red_flags": [],
+      "confidence": 0.9
+    },
+    {
+      "idea_id": "idea-delta",
+      "reviewer_role": "technical",
+      "score": 7,
+      "rationale": "technical view of idea-delta",
+      "red_flags": [],
+      "confidence": 0.8
+    },
+    {
+      "idea_id": "idea-epsilon",
+      "reviewer_role": "market",
+      "score": 9,
+      "rationale": "market view of idea-epsilon",
+      "red_flags": [],
+      "confidence": 0.9,
+      "failure_reason": "provider timed out"
+    },
+    {
+      "idea_id": "idea-epsilon",
+      "reviewer_role": "technical",
+      "score": 9,
+      "rationale": "technical view of idea-epsilon",
+      "red_flags": [],
+      "confidence": 0.9,
+      "failure_reason": "provider timed out"
+    },
+    {
+      "idea_id": "idea-epsilon",
+      "reviewer_role": "financial",
+      "score": 9,
+      "rationale": "financial view of idea-epsilon",
+      "red_flags": [],
+      "confidence": 0.9,
+      "failure_reason": "provider timed out"
+    },
+    {
+      "idea_id": "idea-epsilon",
+      "reviewer_role": "moat",
+      "score": 9,
+      "rationale": "moat view of idea-epsilon",
+      "red_flags": [],
+      "confidence": 0.9,
+      "failure_reason": "provider timed out"
+    },
+    {
+      "idea_id": "idea-epsilon",
+      "reviewer_role": "risk",
+      "score": 9,
+      "rationale": "risk view of idea-epsilon",
+      "red_flags": [],
+      "confidence": 0.9,
+      "failure_reason": "provider timed out"
+    },
+    {
+      "idea_id": "idea-epsilon",
+      "reviewer_role": "ai_resilience",
+      "score": 9,
+      "rationale": "ai_resilience view of idea-epsilon",
+      "red_flags": [],
+      "confidence": 0.9,
+      "failure_reason": "provider timed out"
+    }
+  ],
+  "expected_scores": {
+    "idea-alpha": 0.65925,
+    "idea-zeta": 0.6492500000000001,
+    "idea-beta": 0.6355000000000001,
+    "idea-gamma": 0.24050000000000002,
+    "idea-delta": 0.292,
+    "idea-epsilon": 0.0
+  },
+  "expected_top_ideas": [
+    "idea-alpha",
+    "idea-zeta",
+    "idea-beta"
+  ]
+}
