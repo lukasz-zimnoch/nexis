@@ -87,6 +87,7 @@ class TestResearchAgent:
                 agent.model_name = "claude-sonnet-4-6"
                 agent.output_schema = ResearchOutput
                 agent.system_prompt = "test"
+                agent.prompt_version = "testhash"
                 agent.max_retries = 0
                 agent.timeout = 120
                 agent.fallback_model = None
@@ -122,6 +123,7 @@ class TestResearchAgent:
             agent.model_name = "claude-sonnet-4-6"
             agent.output_schema = ResearchOutput
             agent.system_prompt = "test"
+            agent.prompt_version = "testhash"
             agent.max_retries = 0
             agent.timeout = 120
             agent.fallback_model = None
@@ -169,6 +171,7 @@ class TestTrendScanner:
             agent.model_name = "claude-sonnet-4-6"
             agent.output_schema = TrendScannerOutput
             agent.system_prompt = "test"
+            agent.prompt_version = "testhash"
             agent.max_retries = 0
             agent.timeout = 120
             agent.fallback_model = None
@@ -200,6 +203,7 @@ class TestTrendScanner:
             agent.model_name = "claude-sonnet-4-6"
             agent.output_schema = TrendScannerOutput
             agent.system_prompt = "test"
+            agent.prompt_version = "testhash"
             agent.max_retries = 0
             agent.timeout = 120
             agent.fallback_model = None
@@ -245,6 +249,7 @@ class TestNicheValidator:
             agent.model_name = "claude-sonnet-4-6"
             agent.output_schema = NicheValidatorOutput
             agent.system_prompt = "test"
+            agent.prompt_version = "testhash"
             agent.max_retries = 0
             agent.timeout = 120
             agent.fallback_model = None
@@ -277,6 +282,7 @@ class TestNicheValidator:
             agent.model_name = "claude-sonnet-4-6"
             agent.output_schema = NicheValidatorOutput
             agent.system_prompt = "test"
+            agent.prompt_version = "testhash"
             agent.max_retries = 0
             agent.timeout = 120
             agent.fallback_model = None

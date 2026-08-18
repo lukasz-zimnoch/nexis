@@ -45,7 +45,7 @@ The pipeline consists of four layers: Deep Research (idea generation), Parallel 
 - **Parallel evaluation:** Multiple critic agents review each idea concurrently, reducing wall-clock time.
 - **Typed contracts:** All agent inputs/outputs are Pydantic models. Malformed output triggers structured retry, not silent failure.
 - **Composability:** Each layer is an independently testable subgraph. Layers can be swapped, extended, or bypassed.
-- **Observability:** Every node emits structured JSON logs with its latency and, for each LLM call, the model and the token counts. Optional LangSmith integration traces the call chain.
+- **Observability:** Every node emits structured JSON logs with its latency and, for each LLM call, the model, the token counts and the estimated cost. Each run adds up its own tokens, cost and time, and stores the total with the job. See §8.3. Optional LangSmith integration traces the call chain.
 - **Async execution model:** The UI triggers jobs via the API; the pipeline runs out-of-band in a Cloud Run Job and writes results to Firestore. The UI polls for completion.
 - **Marked trust boundary:** Text that a tool fetched from the web enters a prompt as data inside explicit markers, with a size cap. See §5.7.
 
@@ -441,7 +441,7 @@ Do **not** set `FIREBASE_PROJECT_ID`; the Firebase Admin SDK is initialised from
 
 ### 8.1 Tracing
 
-Every node emits structured JSON events via the `nexis.telemetry` logger. Each event includes: node name, layer ID, latency (ms), input/output state keys, and errors. LLM call events additionally capture agent name, model name, token usage (input/output/total), attempt number, and success status. When `LANGCHAIN_TRACING_V2=true`, LangChain's built-in integration forwards all traces to LangSmith automatically.
+Every node emits structured JSON events via the `nexis.telemetry` logger. Each event includes: node name, layer ID, latency (ms), input/output state keys, and errors. LLM call events additionally capture agent name, model name, layer ID, token usage (input/output/total), estimated cost (USD), prompt version, attempt number, and success status. A null cost means no price is known for that model, not a free call. Every event of a run carries the same `run_id`, and each run closes with one `run_complete` event holding the totals of §8.3. When `LANGCHAIN_TRACING_V2=true`, LangChain's built-in integration forwards all traces to LangSmith automatically.
 
 ### 8.2 Error Handling Strategy
 
@@ -450,6 +450,22 @@ Every node emits structured JSON events via the `nexis.telemetry` logger. Each e
 - **Timeout:** Per-LLM-call timeout configurable via `config.llm_timeout` (default 300s, enforced in `BaseAgent` via `asyncio.wait_for`). On timeout, the agent switches to `config.fallback_model` (default: `google/gemini-3.7-flash`) for remaining retries. If all retries are exhausted, a partial result with `failure_reason` is returned.
 - **Full pipeline failure:** Failed runs are logged with full state snapshot for debugging.
 - **Job trigger failure:** The Service marks the job `failed` and returns 503. The stored `error` and the response body both carry a fixed message. The exception detail stays in the log, because the client can read `JobRecord.error`.
+
+### 8.3 Run Metrics
+
+Each run adds up what it spent. `RunMetrics` (`src/nexis/metrics.py`) counts calls, input and output tokens, estimated cost and LLM seconds, in three views: run totals, per layer, and per agent. It also holds the wall time of the run, the prompt version of each agent, and the models it could not price.
+
+| Property | Rule |
+|---|---|
+| **Scoped** | One `RunMetrics` per run, held in a context variable. asyncio copies the context into every task, so a fan-out adds to the run that started it and never to another run in the same process. |
+| **Attributed** | `instrument_node()` publishes the layer it wraps, so an LLM call several frames below the node lands in the right layer bucket. A call outside any node lands in the `unattributed` bucket. |
+| **Complete** | A call that failed validation counts, because the retry pays for both attempts. The metrics answer what a run cost, not what it bought. |
+| **Honest** | Cost comes from a dated price table in `src/nexis/pricing.py`, so it is an estimate. A model missing from the table is named in `unpriced_models`, and its tokens still count. |
+| **Persistent** | The Cloud Run Job writes the totals to `JobRecord.metrics` for a failed run as well as a completed one, and the SPA renders them beside the report. |
+
+`llm_seconds` is the sum over calls and exceeds `wall_seconds` whenever a layer fans out. The two are reported separately: the ratio shows what concurrency saved.
+
+The prompt version is the first 12 hex characters of the SHA-256 digest of an agent's system prompt. Two runs that report the same digest for an agent ran the same instructions. The rationale for all of this is in ADR-0017.
 
 ---
 
@@ -469,7 +485,7 @@ Assuming 8 candidate ideas with 3 surviving to Layer 3:
 
 Retries add to this. A failed structured-output validation re-invokes the same agent, and a Layer 2 retry re-runs Layers 1 and 2 for the newly generated ideas.
 
-This specification does not price these calls. The per-call price depends on the model assigned to each agent and on that model's current OpenRouter rate, both of which change without any commit to this repository. See `nexis/models.py` for the current assignments and their prices. Tavily search is billed separately.
+This specification does not price these calls. The per-call price depends on the model assigned to each agent and on that model's current OpenRouter rate, both of which change without any commit to this repository. See `nexis/models.py` for the current assignments and `nexis/pricing.py` for the dated price table the pipeline estimates with. Every run reports its own cost (§8.3), which is the number to trust over any figure written here. Tavily search is billed separately and is not in that total.
 
 ---
 

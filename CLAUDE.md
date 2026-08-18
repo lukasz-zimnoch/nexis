@@ -26,6 +26,7 @@ See the [specification](docs/specification.md) for full architecture, data contr
 - Each layer subgraph must be independently testable without running the full pipeline
 - Async-first: all agent methods should be `async def` and use `asyncio.gather()` for concurrency
 - Web text reaches a prompt only through `src/nexis/untrusted.py`: sanitize each result, wrap it with `wrap_untrusted()`, and append `UNTRUSTED_DATA_RULE` to the agent's system prompt (ADR-0016, specification §5.7)
+- Every LLM call goes through `BaseAgent`, so it lands in the run totals. Open a run scope with `run_context()` at an entry point, and keep model prices in `src/nexis/pricing.py` (ADR-0017, specification §8.3)
 
 ## Checkpointer
 
