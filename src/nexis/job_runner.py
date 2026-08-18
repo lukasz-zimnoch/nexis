@@ -9,6 +9,8 @@ import sys
 from datetime import datetime, timezone
 
 from nexis.firestore import JobStatus, get_firestore_client, update_job_status
+from nexis.metrics import RunMetrics
+from nexis.telemetry import run_context
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,9 @@ async def run_job() -> None:
         JobStatus.running,
         started_at=datetime.now(timezone.utc),
     )
+
+    # Bound before the run, so the failure path can report what the run spent.
+    metrics: RunMetrics | None = None
 
     try:
         config = PipelineConfig(
@@ -57,7 +62,8 @@ async def run_job() -> None:
         }
         thread_config = {"configurable": {"thread_id": job_id}}
 
-        final_state = await graph.ainvoke(initial_state, config=thread_config)
+        with run_context(job_id) as metrics:
+            final_state = await graph.ainvoke(initial_state, config=thread_config)
         reports = final_state.get("final_reports", [])
 
         serialized = [r.model_dump(mode="json") for r in reports]
@@ -68,8 +74,15 @@ async def run_job() -> None:
             JobStatus.completed,
             completed_at=datetime.now(timezone.utc),
             result=serialized,
+            metrics=metrics.model_dump(mode="json"),
         )
-        logger.info("job %s completed with %d reports", job_id, len(reports))
+        logger.info(
+            "job %s completed with %d reports, %d LLM calls, %.4f USD",
+            job_id,
+            len(reports),
+            metrics.totals.calls,
+            metrics.totals.cost_usd,
+        )
 
     except Exception as exc:
         logger.exception("job %s failed: %s", job_id, exc)
@@ -79,6 +92,7 @@ async def run_job() -> None:
             JobStatus.failed,
             completed_at=datetime.now(timezone.utc),
             error=str(exc),
+            metrics=metrics.model_dump(mode="json") if metrics is not None else None,
         )
         sys.exit(1)
 

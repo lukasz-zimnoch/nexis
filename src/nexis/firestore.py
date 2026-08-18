@@ -11,6 +11,7 @@ from google.cloud import firestore  # type: ignore[import-untyped]
 from google.cloud.firestore_v1.base_query import FieldFilter  # type: ignore[import-untyped]
 from pydantic import BaseModel
 
+from nexis.metrics import RunMetrics
 from nexis.state import Report
 
 
@@ -44,6 +45,9 @@ class JobRecord(BaseModel):
     completed_at: datetime | None = None
     error: str | None = None
     result: list[Report] | None = None
+    # None until the run ends, and on every job that ran before this field
+    # existed.
+    metrics: RunMetrics | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -102,6 +106,7 @@ def update_job_status(
     completed_at: datetime | None = None,
     error: str | None = None,
     result: list[dict[str, Any]] | None = None,
+    metrics: dict[str, Any] | None = None,
 ) -> None:
     """Partially update a job document (status + optional timestamp/result fields)."""
     updates: dict[str, Any] = {"status": status.value}
@@ -113,6 +118,8 @@ def update_job_status(
         updates["error"] = error
     if result is not None:
         updates["result"] = result
+    if metrics is not None:
+        updates["metrics"] = metrics
     client.collection(_JOBS_COLLECTION).document(job_id).update(updates)
 
 
