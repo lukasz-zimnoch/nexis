@@ -20,6 +20,7 @@ const sampleJob: JobRecord = {
   completed_at: null,
   error: null,
   result: null,
+  metrics: null,
 };
 
 describe("JobCard", () => {

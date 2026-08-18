@@ -169,3 +169,33 @@ select {
 .report h3 {
   margin-top: 1.25rem;
 }
+
+.metric-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.metrics-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.875rem;
+}
+
+.metrics-table th,
+.metrics-table td {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.375rem 0.5rem;
+  text-align: right;
+}
+
+.metrics-table th:first-child,
+.metrics-table td:first-child {
+  text-align: left;
+}
+
+.metrics-table th {
+  color: #6b7280;
+  font-weight: 500;
+}

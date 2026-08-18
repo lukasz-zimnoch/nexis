@@ -56,6 +56,11 @@ async def test_run_job_happy_path():
     )
     assert completed_call.kwargs.get("result") is not None
 
+    metrics = completed_call.kwargs.get("metrics")
+    assert metrics is not None
+    assert metrics["run_id"] == "job-test-001"
+    assert metrics["wall_seconds"] > 0
+
 
 async def test_run_job_failure_sets_failed_status():
     mock_graph = AsyncMock()
@@ -81,3 +86,8 @@ async def test_run_job_failure_sets_failed_status():
         c for c in mock_update.call_args_list if c.args[2] == JobStatus.failed
     )
     assert "pipeline exploded" in failed_call.kwargs.get("error", "")
+
+    # A run that broke halfway still spent money, so it reports what it spent.
+    metrics = failed_call.kwargs.get("metrics")
+    assert metrics is not None
+    assert metrics["run_id"] == "job-test-001"

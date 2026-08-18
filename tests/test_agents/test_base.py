@@ -11,6 +11,7 @@ import pytest
 from pydantic import BaseModel
 
 from nexis.agents.base import BaseAgent, _minimal_value
+from nexis.telemetry import prompt_version
 
 
 class SimpleOutput(BaseModel):
@@ -169,6 +170,36 @@ async def test_token_usage_logged(mock_llm, caplog):
     assert event["total_tokens"] == 150
     assert event["success"] is True
     assert event["attempt"] == 1
+
+
+@pytest.mark.asyncio
+async def test_prompt_version_reported_with_every_call(mock_llm, caplog):
+    mock_llm.ainvoke = AsyncMock(return_value=_wrap(SimpleOutput(answer="ok")))
+
+    agent = make_agent(mock_llm)
+    with caplog.at_level(logging.INFO, logger="nexis.telemetry"):
+        await agent.invoke({"q": "test"})
+
+    event = next(
+        json.loads(r.message)
+        for r in caplog.records
+        if r.name == "nexis.telemetry" and "llm_call" in r.message
+    )
+    assert event["prompt_version"] == prompt_version("You are a test agent.")
+
+
+def test_prompt_version_follows_the_system_prompt(mock_llm):
+    one = BaseAgent(
+        model_name="claude-sonnet-4-6",
+        output_schema=SimpleOutput,
+        system_prompt="You are a test agent.",
+    )
+    two = BaseAgent(
+        model_name="claude-sonnet-4-6",
+        output_schema=SimpleOutput,
+        system_prompt="You are a different test agent.",
+    )
+    assert one.prompt_version != two.prompt_version
 
 
 @pytest.mark.asyncio

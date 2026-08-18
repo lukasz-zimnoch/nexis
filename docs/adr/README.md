@@ -28,6 +28,7 @@ prompted them, the alternatives considered, and the trade-offs accepted.
 | [0014](0014-firebase-auth-firestore-persistence.md) | Firebase Auth and Firestore for Auth and Job Persistence | Accepted | 2026-04-10 |
 | [0015](0015-react-vite-monolith-spa.md) | React + Vite SPA Served from the FastAPI Container | Accepted | 2026-04-10 |
 | [0016](0016-untrusted-web-content-trust-boundary.md) | Trust Boundary for Web Content in Prompts | Accepted | 2026-08-17 |
+| [0017](0017-per-run-cost-and-token-metrics.md) | Per-Run Cost and Token Metrics | Accepted | 2026-08-18 |
 
 ## How to Add a New ADR
 

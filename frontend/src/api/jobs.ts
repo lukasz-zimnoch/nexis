@@ -22,6 +22,26 @@ export interface Report {
   format: OutputFormat;
 }
 
+// Mirrors src/nexis/metrics.py::CallMetrics.
+export interface CallMetrics {
+  calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+  llm_seconds: number;
+}
+
+// Mirrors src/nexis/metrics.py::RunMetrics.
+export interface RunMetrics {
+  run_id: string;
+  wall_seconds: number;
+  totals: CallMetrics;
+  by_layer: Record<string, CallMetrics>;
+  by_agent: Record<string, CallMetrics>;
+  prompt_versions: Record<string, string>;
+  unpriced_models: string[];
+}
+
 export interface JobRecord {
   id: string;
   user_id: string;
@@ -32,6 +52,8 @@ export interface JobRecord {
   completed_at: string | null;
   error: string | null;
   result: Report[] | null;
+  // Absent on a job that ran before the backend measured its runs.
+  metrics: RunMetrics | null;
 }
 
 export function isActiveStatus(status: JobStatus): boolean {

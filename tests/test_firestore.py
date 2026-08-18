@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from nexis.metrics import RunMetrics
 from nexis.firestore import (
     JobConfig,
     JobRecord,
@@ -167,3 +168,50 @@ def test_update_job_status_calls_update(mock_client: MagicMock):
     mock_client.collection().document().update.assert_called_once_with(
         {"status": "running", "started_at": now}
     )
+
+
+# ---------------------------------------------------------------------------
+# Run metrics
+# ---------------------------------------------------------------------------
+
+
+def test_job_metrics_default_to_none(sample_job: JobRecord):
+    assert sample_job.metrics is None
+
+
+def test_metrics_survive_a_round_trip(sample_job: JobRecord):
+    metrics = RunMetrics(run_id="job-001", wall_seconds=42.5)
+    metrics.record_call(
+        agent="ResearchAgent",
+        layer="research",
+        model="anthropic/claude-opus-5",
+        input_tokens=1_000,
+        output_tokens=200,
+        seconds=1.5,
+        cost_usd=0.01,
+        prompt_version="abc123abc123",
+    )
+    job = sample_job.model_copy(update={"metrics": metrics})
+
+    restored = _deserialize_job(_serialize_job(job))
+    assert restored.metrics == metrics
+
+
+def test_deserialize_accepts_a_record_without_metrics(sample_job: JobRecord):
+    """A job written before the metrics field existed must still read back."""
+    data = _serialize_job(sample_job)
+    del data["metrics"]
+    assert _deserialize_job(data).metrics is None
+
+
+def test_update_job_status_writes_metrics(mock_client: MagicMock):
+    metrics = RunMetrics(run_id="job-001", wall_seconds=42.5)
+    update_job_status(
+        mock_client,
+        "job-001",
+        JobStatus.completed,
+        metrics=metrics.model_dump(mode="json"),
+    )
+    updates = mock_client.collection().document().update.call_args[0][0]
+    assert updates["metrics"]["run_id"] == "job-001"
+    assert updates["metrics"]["wall_seconds"] == 42.5

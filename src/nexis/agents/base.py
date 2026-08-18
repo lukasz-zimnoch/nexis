@@ -12,7 +12,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 
-from nexis.telemetry import log_llm_call
+from nexis.telemetry import log_llm_call, prompt_version
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,7 @@ class BaseAgent:
         self.model_name = model_name
         self.output_schema = output_schema
         self.system_prompt = system_prompt
+        self.prompt_version = prompt_version(system_prompt)
         self.max_retries = max_retries
         self.timeout = timeout
         self.fallback_model = fallback_model
@@ -118,6 +119,7 @@ class BaseAgent:
                     total_tokens=total_tokens,
                     attempt=attempt + 1,
                     success=parsing_error is None,
+                    prompt_version=self.prompt_version,
                 )
 
                 if parsing_error is not None:
@@ -154,7 +156,7 @@ class BaseAgent:
             "%s exhausted all retries, returning failure result",
             self.__class__.__name__,
         )
-        return self._failure_result(last_error or "Unknown error")
+        return self.failure_result(last_error or "Unknown error")
 
     def _switch_to_fallback(self) -> None:
         """Switch to fallback model for remaining retries after a timeout."""
@@ -192,8 +194,12 @@ class BaseAgent:
                 parts.append(f"{key}: {value}")
         return "\n\n".join(parts)
 
-    def _failure_result(self, reason: str) -> T:
-        """Build a minimal valid instance with failure_reason set."""
+    def failure_result(self, reason: str) -> T:
+        """Build a minimal valid instance with failure_reason set.
+
+        Part of the agent contract: a caller that catches an error from a fan-out
+        branch builds the same shape of result the agent builds for itself.
+        """
         # Try to construct with failure_reason; fall back to a dict-based attempt
         schema = self.output_schema
         fields = schema.model_fields
