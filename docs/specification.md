@@ -547,7 +547,7 @@ nexis/
 │   └── adr/                       # Architecture Decision Records (18 ADRs)
 ├── infrastructure/
 │   └── terraform/                 # Declarative GCP infrastructure (ADR-0012)
-├── .github/workflows/             # CI (lint/test/build/push) and deploy workflows
+├── .github/workflows/             # CI (lint/test/build/push), deploy, and the manual eval workflow
 ├── src/nexis/
 │   ├── layers/                    # Four LangGraph subgraphs (research, review, planning, output)
 │   ├── agents/                    # Per-agent LLM wrappers and shared BaseAgent
