@@ -1,0 +1,66 @@
+name: Evals
+
+# Manual only. These calls cost money, so they must never fire on a push or a
+# pull request. Every other check the project runs is free and lives in ci.yml.
+on:
+  workflow_dispatch:
+    inputs:
+      repeats:
+        description: "Reviews per idea. 1 calibrates, 5 also measures variance."
+        required: true
+        default: "1"
+      model:
+        description: "One model for every role. Leave empty to use the real panel."
+        required: false
+        default: ""
+      max_usd:
+        description: "Refuse to start above this projected cost."
+        required: true
+        default: "1.00"
+      min_hit_rate:
+        description: "Share of labelled scores each role must land in band."
+        required: true
+        default: "0.7"
+
+jobs:
+  evals:
+    name: Reviewer calibration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen --dev
+
+      # The reviewers read frozen ideas, so no search key is needed here.
+      - name: Collect reviews
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          uv run python -m nexis.evals collect \
+            --dataset tests/evals/dataset.jsonl \
+            --out eval-run \
+            --repeats "${{ inputs.repeats }}" \
+            --max-usd "${{ inputs.max_usd }}" \
+            ${{ inputs.model && format('--model {0}', inputs.model) || '' }}
+
+      # Runs even when collection broke halfway, because the answers already
+      # paid for are on disk and still worth reading. Skipped when the spend
+      # guard refused the run, which leaves no directory at all.
+      - name: Report
+        if: always() && hashFiles('eval-run/manifest.json') != ''
+        run: |
+          uv run python -m nexis.evals report \
+            --run eval-run \
+            --dataset tests/evals/dataset.jsonl \
+            --min-hit-rate "${{ inputs.min_hit_rate }}" \
+            --out eval-run/report.md
+          cat eval-run/report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the run
+        if: always() && hashFiles('eval-run/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-run
+          path: eval-run/

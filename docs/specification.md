@@ -48,6 +48,7 @@ The pipeline consists of four layers: Deep Research (idea generation), Parallel 
 - **Observability:** Every node emits structured JSON logs with its latency and, for each LLM call, the model, the token counts and the estimated cost. Each run adds up its own tokens, cost and time, and stores the total with the job. See §8.3. Optional LangSmith integration traces the call chain.
 - **Async execution model:** The UI triggers jobs via the API; the pipeline runs out-of-band in a Cloud Run Job and writes results to Firestore. The UI polls for completion.
 - **Marked trust boundary:** Text that a tool fetched from the web enters a prompt as data inside explicit markers, with a size cap. See §5.7.
+- **Measured reviewers:** The review panel is checked against a frozen, hand-labelled dataset, and its run-to-run spread is measured rather than assumed. See §6.4.
 
 ### 2.2 High-Level Flow
 
@@ -381,6 +382,24 @@ This normalizes to a 0.0–1.0 range. The confidence multiplier penalizes low-co
 
 Default threshold: **0.55** (configurable). Ideas scoring below this are dropped. The top K ideas (default K=3) proceed to Layer 3. If fewer than K ideas pass the threshold, all passing ideas proceed.
 
+### 6.4 Reviewer Calibration and Variance
+
+§6.1 to §6.3 treat a reviewer score as a measurement. Two evals check that assumption. Both run from `nexis/evals` (ADR-0018).
+
+**Calibration** asks whether a reviewer agrees with a human. `tests/evals/dataset.jsonl` holds frozen `BusinessIdea` objects. Each carries the score band one or more roles are expected to land in, and the written reasoning behind those bands. A score inside its band is correct, and the error is the distance to the nearest edge, which is zero inside. Each role must reach a minimum share of in-band scores; the default is 70%.
+
+A label is a band and never a single value. A human can say that an obviously commoditised idea must not score 8 for moat, and cannot say whether it is a 2 or a 3. A role carries a band only where the label writer holds a firm opinion, so an unlabelled pair is reviewed but does not gate.
+
+**Variance** asks whether a reviewer agrees with itself. The same ideas run N times, and the report gives the standard deviation of the score per role. This needs at least two repeats; one repeat produces an empty variance report rather than a zero.
+
+**Collection is separate from analysis.** `collect` calls the models and appends every answer to `reviews.jsonl` as it arrives. `report` reads that directory, calls no API, and exits non-zero when a role misses the gate. Changing a metric, a band or a threshold therefore costs nothing, and an interrupted run keeps the answers it paid for. A manifest is written before the first call, so a run that dies halfway stays analysable.
+
+**An eval never runs Layer 1.** The ideas are frozen, which holds every variable except the reviewer and keeps the search API out of the loop.
+
+**Spending is capped in code.** The collector projects the cost from the price table (§8.3) and refuses to start above a limit passed on the command line. A model with no price stops the projection instead of counting as free. The manifest stores the projected and the measured cost side by side.
+
+The workflow that runs the evals in CI is manual and never fires on a push or a pull request. The formula in §6.2 needs no LLM, and is frozen separately in a regression test that runs in the ordinary CI job.
+
 ---
 
 ## 7. Configuration
@@ -490,6 +509,8 @@ Assuming 8 candidate ideas with 3 surviving to Layer 3:
 
 Retries add to this. A failed structured-output validation re-invokes the same agent, and a Layer 2 retry re-runs Layers 1 and 2 for the newly generated ideas.
 
+An eval run has a different shape: ideas × 6 roles × repeats, with Layer 1 never starting. The frozen dataset of 15 ideas therefore costs 90 calls per repeat (§6.4).
+
 This specification does not price these calls. The per-call price depends on the model assigned to each agent and on that model's current OpenRouter rate, both of which change without any commit to this repository. See `nexis/models.py` for the current assignments and `nexis/pricing.py` for the dated price table the pipeline estimates with. Every run reports its own cost (§8.3), which is the number to trust over any figure written here. Tavily search is billed separately and is not in that total.
 
 ---
@@ -523,14 +544,15 @@ nexis/
 ├── docs/
 │   ├── specification.md           # This document
 │   ├── deployment.md              # Terraform + Firebase + Cloud Run runbook
-│   └── adr/                       # Architecture Decision Records (15 ADRs)
+│   └── adr/                       # Architecture Decision Records (18 ADRs)
 ├── infrastructure/
 │   └── terraform/                 # Declarative GCP infrastructure (ADR-0012)
-├── .github/workflows/             # CI (lint/test/build/push) and deploy workflows
+├── .github/workflows/             # CI (lint/test/build/push), deploy, and the manual eval workflow
 ├── src/nexis/
 │   ├── layers/                    # Four LangGraph subgraphs (research, review, planning, output)
 │   ├── agents/                    # Per-agent LLM wrappers and shared BaseAgent
 │   ├── tools/                     # External tool integrations (Tavily search, trend scraping)
+│   ├── evals/                     # Reviewer calibration and variance harness (ADR-0018)
 │   └── templates/                 # Jinja2 templates for report generation
 ├── frontend/                      # React + Vite SPA (ADR-0015)
 │   └── src/
@@ -543,7 +565,9 @@ nexis/
 ├── tests/
 │   ├── test_agents/               # Per-agent unit tests (mocked LLM)
 │   ├── test_layers/               # Per-layer subgraph tests
-│   └── test_tools/                # Search and trend tool tests
+│   ├── test_tools/                # Search and trend tool tests
+│   ├── test_evals/                # Eval harness tests (stand-in reviewer, no API)
+│   └── evals/                     # Frozen eval data: labelled dataset and scoring fixture
 ├── Dockerfile                     # Multi-stage: Node builds SPA → Python runtime
 ├── pyproject.toml
 ├── .env.example                   # Mandatory no-default backend env vars
