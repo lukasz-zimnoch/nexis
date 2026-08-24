@@ -55,14 +55,25 @@ def render_run(manifest: RunManifest) -> list[str]:
         "two columns is the assumption being wrong, not the price."
     )
 
-    lines.extend(["", "### Models", ""])
+    lines.extend(["", "### Panel", ""])
     lines.extend(
         _table(
-            ["Role", "Model"],
-            [[role, model] for role, model in sorted(manifest.models.items())],
+            ["Role", "Model", "Temperature"],
+            [
+                [role, model, _temperature_cell(manifest, role)]
+                for role, model in sorted(manifest.models.items())
+            ],
         )
     )
     return lines
+
+
+def _temperature_cell(manifest: RunManifest, role: str) -> str:
+    """Name the temperature a role ran at, or say the run never recorded one."""
+    if role not in manifest.temperatures:
+        return "not recorded"
+    temperature = manifest.temperatures[role]
+    return "provider default" if temperature is None else f"{temperature}"
 
 
 def render_calibration(report: CalibrationReport, min_hit_rate: float) -> list[str]:

@@ -80,12 +80,14 @@ async def plan_idea_node(state: PlanningNodeState) -> dict:
 
     mvp_architect = MVPArchitect(
         model_name=config.model_for("mvp_architect"),
+        temperature=config.temperature_for("mvp_architect"),
         max_retries=config.max_retries,
         timeout=config.llm_timeout,
         fallback_model=config.fallback_model,
     )
     gtm_strategist = GTMStrategist(
         model_name=config.model_for("gtm_strategist"),
+        temperature=config.temperature_for("gtm_strategist"),
         max_retries=config.max_retries,
         timeout=config.llm_timeout,
         fallback_model=config.fallback_model,
@@ -104,6 +106,7 @@ async def plan_idea_node(state: PlanningNodeState) -> dict:
 
     composer = BusinessPlanComposer(
         model_name=config.model_for("business_plan_composer"),
+        temperature=config.temperature_for("business_plan_composer"),
         max_retries=config.max_retries,
         timeout=config.llm_timeout,
         fallback_model=config.fallback_model,

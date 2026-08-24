@@ -49,6 +49,7 @@ The pipeline consists of four layers: Deep Research (idea generation), Parallel 
 - **Async execution model:** The UI triggers jobs via the API; the pipeline runs out-of-band in a Cloud Run Job and writes results to Firestore. The UI polls for completion.
 - **Marked trust boundary:** Text that a tool fetched from the web enters a prompt as data inside explicit markers, with a size cap. See §5.7.
 - **Measured reviewers:** The review panel is checked against a frozen, hand-labelled dataset, and its run-to-run spread is measured rather than assumed. See §6.4.
+- **Stated sampling:** Each agent runs at a temperature the project chooses, not at a provider default. Agents that judge are held steady; the agent that invents is allowed to spread. See §7.3.
 
 ### 2.2 High-Level Flow
 
@@ -286,8 +287,14 @@ async def plan_idea_node(state: PlanningLayerState) -> dict:
     idea_reviews = [r for r in state["reviews"] if r.idea_id == idea_id]
     config = state["config"]
 
-    mvp_architect = MVPArchitect(model_name=config.model_for("mvp_architect"))
-    gtm_strategist = GTMStrategist(model_name=config.model_for("gtm_strategist"))
+    mvp_architect = MVPArchitect(
+        model_name=config.model_for("mvp_architect"),
+        temperature=config.temperature_for("mvp_architect"),
+    )
+    gtm_strategist = GTMStrategist(
+        model_name=config.model_for("gtm_strategist"),
+        temperature=config.temperature_for("gtm_strategist"),
+    )
 
     mvp_result, gtm_result = await asyncio.gather(
         mvp_architect.invoke_mvp(idea, idea_reviews),
@@ -297,7 +304,10 @@ async def plan_idea_node(state: PlanningLayerState) -> dict:
     mvp_plan = _or_failure(mvp_result, mvp_architect, idea_id)
     gtm_plan = _or_failure(gtm_result, gtm_strategist, idea_id)
 
-    composer = BusinessPlanComposer(model_name=config.model_for("business_plan_composer"))
+    composer = BusinessPlanComposer(
+        model_name=config.model_for("business_plan_composer"),
+        temperature=config.temperature_for("business_plan_composer"),
+    )
     business_plan = await composer.invoke_plan(idea, mvp_plan, gtm_plan)
 
     return {
@@ -392,7 +402,7 @@ A label is a band and never a single value. A human can say that an obviously co
 
 **Variance** asks whether a reviewer agrees with itself. The same ideas run N times, and the report gives the standard deviation of the score per role. This needs at least two repeats; one repeat produces an empty variance report rather than a zero.
 
-**Collection is separate from analysis.** `collect` calls the models and appends every answer to `reviews.jsonl` as it arrives. `report` reads that directory, calls no API, and exits non-zero when a role misses the gate. It also names any role whose answers came from a prompt or a model that the code no longer uses, because an answer is evidence about what produced it and about nothing else; that note explains the numbers rather than judging them, so it leaves the exit code alone. Changing a metric, a band or a threshold therefore costs nothing, and an interrupted run keeps the answers it paid for. A manifest is written before the first call, so a run that dies halfway stays analysable.
+**Collection is separate from analysis.** `collect` calls the models and appends every answer to `reviews.jsonl` as it arrives. `report` reads that directory, calls no API, and exits non-zero when a role misses the gate. It also names any role whose answers came from a prompt, a model, or a temperature that the code no longer uses, because an answer is evidence about what produced it and about nothing else; that note explains the numbers rather than judging them, so it leaves the exit code alone. The manifest records the temperature per role for this reason. A manifest written before that field existed records none and makes no claim, so the check skips it. Changing a metric, a band or a threshold therefore costs nothing, and an interrupted run keeps the answers it paid for. A manifest is written before the first call, so a run that dies halfway stays analysable.
 
 **An eval never runs Layer 1.** The ideas are frozen, which holds every variable except the reviewer and keeps the search API out of the loop.
 
@@ -417,6 +427,7 @@ All pipeline behavior is controlled via a `PipelineConfig` Pydantic model passed
 | `max_retries` | `int` | `2` | Maximum retry loops if no ideas pass the threshold |
 | `reviewer_weights` | `dict` | See §6.1 | Custom weights for the scoring formula |
 | `agent_models` | `dict[str, str]` | Per-agent defaults from `nexis/models.py` | Maps agent keys (e.g. `"research_agent"`, `"reviewer_market"`) to OpenRouter model IDs. All LLM calls are routed through OpenRouter — `OPENROUTER_API_KEY` must be set. |
+| `agent_temperatures` | `dict[str, float \| None]` | Per-agent defaults from `nexis/sampling.py` | Maps the same agent keys to a sampling temperature. `None` sends no temperature and takes the provider default. Must cover exactly the keys in `agent_models`, or the config refuses to build. See §7.3. |
 | `output_format` | `str` | `markdown` | Final report format: `markdown` \| `json` |
 | `llm_timeout` | `int` | `300` | Per-LLM-call timeout in seconds (enforced via `asyncio.wait_for`) |
 | `fallback_model` | `str` | `google/gemini-3.7-flash` | Fallback model used when primary model times out (switched for remaining retries) |
@@ -459,6 +470,22 @@ The backend and frontend both read configuration from environment variables. In 
 
 Do **not** set `FIREBASE_PROJECT_ID`; the Firebase Admin SDK is initialised from `GCP_PROJECT_ID` (the same GCP project hosts both), and `/config.json` reuses it for the Web SDK `projectId`. The Cloud Run Job name (`nexis-job`) is hardcoded in `job_trigger.py` and Terraform — it is not configurable per deployment.
 
+### 7.3 Sampling Policy
+
+Every agent runs at a temperature named in `src/nexis/sampling.py`. The pipeline holds two kinds of agent and they take opposite settings: an agent that judges is an instrument and must not move on its own, while an agent that invents exists to return what the last run did not.
+
+| Band | Value | Agents |
+|---|---|---|
+| `MEASUREMENT` | `0.0` | the six reviewers, Trend Scanner, Niche Validator |
+| `BALANCED` | `0.5` | MVP Architect, GTM Strategist, Business Plan Composer, Devil's Advocate |
+| `DIVERGENCE` | `1.0` | Research Agent |
+
+The split does not follow the layer boundary. Layer 1 holds both kinds: the Research Agent invents ideas, while the Trend Scanner lists signals in pages it is handed and the Niche Validator answers yes or no.
+
+`build_llm()` and every agent constructor take `temperature` with no default, so an agent whose author never chose a value fails to construct. `_switch_to_fallback()` carries the same temperature to the fallback client, so a timeout cannot re-sample a reviewer at a different setting. `None` means "send no temperature", which is the way to handle a model that rejects the parameter.
+
+Lower temperature narrows the spread; it does not remove it. Read these settings as reduced variance, never as a repeatable result. See ADR-0019.
+
 ---
 
 ## 8. Observability and Error Handling
@@ -471,7 +498,7 @@ Every node emits structured JSON events via the `nexis.telemetry` logger. Each e
 
 - **LLM validation failure:** Retry with error context appended to prompt (max 2 retries). On persistent failure, write partial result with `failure_reason` field populated.
 - **Tool failure (search, API):** Immediate first attempt, then exponential backoff (1s, 4s, 16s). On persistent failure, agent proceeds with available data and logs a warning.
-- **Timeout:** Per-LLM-call timeout configurable via `config.llm_timeout` (default 300s, enforced in `BaseAgent` via `asyncio.wait_for`). On timeout, the agent switches to `config.fallback_model` (default: `google/gemini-3.7-flash`) for remaining retries. If all retries are exhausted, a partial result with `failure_reason` is returned.
+- **Timeout:** Per-LLM-call timeout configurable via `config.llm_timeout` (default 300s, enforced in `BaseAgent` via `asyncio.wait_for`). On timeout, the agent switches to `config.fallback_model` (default: `google/gemini-3.7-flash`) for remaining retries, keeping its sampling temperature (§7.3). If all retries are exhausted, a partial result with `failure_reason` is returned.
 - **Full pipeline failure:** Failed runs are logged with full state snapshot for debugging.
 - **Job trigger failure:** The Service marks the job `failed` and returns 503. The stored `error` and the response body both carry a fixed message. The exception detail stays in the log, because the client can read `JobRecord.error`.
 
@@ -544,7 +571,7 @@ nexis/
 ├── docs/
 │   ├── specification.md           # This document
 │   ├── deployment.md              # Terraform + Firebase + Cloud Run runbook
-│   └── adr/                       # Architecture Decision Records (18 ADRs)
+│   └── adr/                       # Architecture Decision Records (19 ADRs)
 ├── infrastructure/
 │   └── terraform/                 # Declarative GCP infrastructure (ADR-0012)
 ├── .github/workflows/             # CI (lint/test/build/push), deploy, and the manual eval workflow

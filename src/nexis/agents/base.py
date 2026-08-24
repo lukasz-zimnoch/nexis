@@ -19,8 +19,15 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T", bound=BaseModel)
 
 
-def build_llm(model_name: str):
-    """Build an LLM client routed through OpenRouter."""
+def build_llm(model_name: str, temperature: float | None):
+    """Build an LLM client routed through OpenRouter.
+
+    `temperature` has no default because the right value depends on the agent's
+    job, so a caller that omits it is almost certainly guessing. Pass None to
+    send no temperature at all and take the provider default, which is the way
+    out for a model that rejects the setting.
+    """
+    extra = {} if temperature is None else {"temperature": temperature}
     return ChatOpenAI(
         model=model_name,
         api_key=os.environ["OPENROUTER_API_KEY"],
@@ -29,6 +36,7 @@ def build_llm(model_name: str):
             "HTTP-Referer": "https://github.com/lukasz-zimnoch/nexis",
             "X-Title": "Nexis",
         },
+        **extra,
     )
 
 
@@ -40,6 +48,7 @@ class BaseAgent:
         model_name: str,
         output_schema: type[T],
         system_prompt: str,
+        temperature: float | None,
         tools: list | None = None,
         max_retries: int = 2,
         timeout: int = 120,
@@ -49,13 +58,14 @@ class BaseAgent:
         self.output_schema = output_schema
         self.system_prompt = system_prompt
         self.prompt_version = prompt_version(system_prompt)
+        self.temperature = temperature
         self.max_retries = max_retries
         self.timeout = timeout
         self.fallback_model = fallback_model
         self._tools = tools
         self._switched_to_fallback = False
 
-        llm = build_llm(model_name)
+        llm = build_llm(model_name, temperature)
         if tools:
             llm = llm.bind_tools(tools)
         self._llm = llm.with_structured_output(output_schema, include_raw=True)
@@ -159,7 +169,12 @@ class BaseAgent:
         return self.failure_result(last_error or "Unknown error")
 
     def _switch_to_fallback(self) -> None:
-        """Switch to fallback model for remaining retries after a timeout."""
+        """Switch to fallback model for remaining retries after a timeout.
+
+        The temperature carries over. A timeout must not quietly re-sample the
+        agent at a different setting, which for a reviewer would mean the
+        instrument changes calibration exactly when the run is already degraded.
+        """
         if self._switched_to_fallback or not self.fallback_model:
             return
         if self.fallback_model == self.model_name:
@@ -172,7 +187,7 @@ class BaseAgent:
         )
         self._switched_to_fallback = True
         self.model_name = self.fallback_model
-        llm = build_llm(self.fallback_model)
+        llm = build_llm(self.fallback_model, self.temperature)
         if self._tools:
             llm = llm.bind_tools(self._tools)
         self._llm = llm.with_structured_output(self.output_schema, include_raw=True)

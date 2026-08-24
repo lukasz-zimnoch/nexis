@@ -330,7 +330,9 @@ class TestUntrustedWebContent:
         """Search results reach the prompt inside one untrusted block."""
         mock_llm = _mock_llm(ResearchOutput(ideas=[make_business_idea()]))
         with patch("nexis.agents.base.ChatOpenAI", return_value=mock_llm):
-            agent = ResearchAgent(model_name="claude-sonnet-4-6", max_retries=0)
+            agent = ResearchAgent(
+                model_name="claude-sonnet-4-6", temperature=0.0, max_retries=0
+            )
         agent._search = MagicMock()
         agent._search.search = AsyncMock(
             return_value=[{"title": "Trend report", "content": INJECTION_PAYLOAD}]
@@ -354,7 +356,9 @@ class TestUntrustedWebContent:
         """Scraped trend text reaches the prompt inside one untrusted block."""
         mock_llm = _mock_llm(TrendScannerOutput(signals=[make_trend_signal()]))
         with patch("nexis.agents.base.ChatOpenAI", return_value=mock_llm):
-            agent = TrendScanner(model_name="claude-sonnet-4-6", max_retries=0)
+            agent = TrendScanner(
+                model_name="claude-sonnet-4-6", temperature=0.0, max_retries=0
+            )
         agent._scraper = MagicMock()
         agent._scraper.scrape = AsyncMock(
             return_value=[make_trend_signal(INJECTION_PAYLOAD)]
@@ -374,7 +378,9 @@ class TestUntrustedWebContent:
         """One long page cannot spend more than the limit on the prompt."""
         mock_llm = _mock_llm(ResearchOutput(ideas=[make_business_idea()]))
         with patch("nexis.agents.base.ChatOpenAI", return_value=mock_llm):
-            agent = ResearchAgent(model_name="claude-sonnet-4-6", max_retries=0)
+            agent = ResearchAgent(
+                model_name="claude-sonnet-4-6", temperature=0.0, max_retries=0
+            )
         agent._search = MagicMock()
         agent._search.search = AsyncMock(
             return_value=[{"title": "Long page", "content": "x" * 5000}]
@@ -395,7 +401,9 @@ class TestUntrustedWebContent:
         """No search results means no untrusted block at all."""
         mock_llm = _mock_llm(ResearchOutput(ideas=[make_business_idea()]))
         with patch("nexis.agents.base.ChatOpenAI", return_value=mock_llm):
-            agent = ResearchAgent(model_name="claude-sonnet-4-6", max_retries=0)
+            agent = ResearchAgent(
+                model_name="claude-sonnet-4-6", temperature=0.0, max_retries=0
+            )
         agent._search = MagicMock()
         agent._search.search = AsyncMock(return_value=[])
 

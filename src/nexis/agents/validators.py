@@ -119,6 +119,7 @@ class DevilsAdvocate(BaseAgent):
     def __init__(
         self,
         model_name: str,
+        temperature: float | None,
         max_retries: int = 2,
         timeout: int = 120,
         fallback_model: str | None = None,
@@ -132,6 +133,7 @@ class DevilsAdvocate(BaseAgent):
                 "What regulatory barriers could kill this? What single points of failure exist? "
                 "Be specific and evidence-based."
             ),
+            temperature=temperature,
             max_retries=max_retries,
             timeout=timeout,
             fallback_model=fallback_model,

@@ -76,7 +76,9 @@ async def test_mvp_architect_returns_mvp_plan(
     )
     mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(expected))
 
-    architect = MVPArchitect(model_name="claude-sonnet-4-6", max_retries=0)
+    architect = MVPArchitect(
+        model_name="claude-sonnet-4-6", temperature=0.0, max_retries=0
+    )
     result = await architect.invoke_mvp(sample_business_idea, [sample_review])
 
     assert isinstance(result, MVPPlan)
@@ -95,7 +97,9 @@ async def test_mvp_architect_handles_llm_failure(
     )
     mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(failed_plan))
 
-    architect = MVPArchitect(model_name="claude-sonnet-4-6", max_retries=0)
+    architect = MVPArchitect(
+        model_name="claude-sonnet-4-6", temperature=0.0, max_retries=0
+    )
     result = await architect.invoke_mvp(sample_business_idea, [])
 
     assert isinstance(result, MVPPlan)
@@ -137,7 +141,9 @@ async def test_gtm_strategist_returns_gtm_plan(
     )
     mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(expected))
 
-    strategist = GTMStrategist(model_name="claude-sonnet-4-6", max_retries=0)
+    strategist = GTMStrategist(
+        model_name="claude-sonnet-4-6", temperature=0.0, max_retries=0
+    )
     result = await strategist.invoke_gtm(sample_business_idea, [sample_review])
 
     assert isinstance(result, GTMPlan)
@@ -154,7 +160,9 @@ async def test_gtm_strategist_handles_llm_failure(
     failed_plan = sample_gtm_plan.model_copy(update={"failure_reason": "timeout"})
     mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(failed_plan))
 
-    strategist = GTMStrategist(model_name="claude-sonnet-4-6", max_retries=0)
+    strategist = GTMStrategist(
+        model_name="claude-sonnet-4-6", temperature=0.0, max_retries=0
+    )
     result = await strategist.invoke_gtm(sample_business_idea, [])
 
     assert isinstance(result, GTMPlan)
@@ -178,7 +186,9 @@ async def test_composer_returns_business_plan(
     )
     mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(synthesis))
 
-    composer = BusinessPlanComposer(model_name="claude-sonnet-4-6", max_retries=0)
+    composer = BusinessPlanComposer(
+        model_name="claude-sonnet-4-6", temperature=0.0, max_retries=0
+    )
     result = await composer.invoke_plan(
         sample_business_idea, sample_mvp_plan, sample_gtm_plan
     )
@@ -206,7 +216,9 @@ async def test_composer_with_partial_mvp_input_does_not_crash(
     )
     mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(synthesis))
 
-    composer = BusinessPlanComposer(model_name="claude-sonnet-4-6", max_retries=0)
+    composer = BusinessPlanComposer(
+        model_name="claude-sonnet-4-6", temperature=0.0, max_retries=0
+    )
     # Must not raise
     result = await composer.invoke_plan(
         sample_business_idea, failed_mvp, sample_gtm_plan
@@ -234,7 +246,9 @@ async def test_composer_with_partial_gtm_input_does_not_crash(
     )
     mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(synthesis))
 
-    composer = BusinessPlanComposer(model_name="claude-sonnet-4-6", max_retries=0)
+    composer = BusinessPlanComposer(
+        model_name="claude-sonnet-4-6", temperature=0.0, max_retries=0
+    )
     result = await composer.invoke_plan(
         sample_business_idea, sample_mvp_plan, failed_gtm
     )

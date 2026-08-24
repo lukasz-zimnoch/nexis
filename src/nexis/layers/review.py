@@ -72,6 +72,7 @@ async def review_node(state: ReviewNodeState) -> dict:
     agent: ReviewerAgent = create_reviewer(
         role=role,
         model_name=config.model_for(f"reviewer_{role.value}"),
+        temperature=config.temperature_for(f"reviewer_{role.value}"),
         max_retries=config.max_retries,
         timeout=config.llm_timeout,
         fallback_model=config.fallback_model,

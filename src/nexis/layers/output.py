@@ -31,6 +31,7 @@ async def devils_advocate_node(state: PipelineState) -> dict:
 
     advocate = DevilsAdvocate(
         model_name=config.model_for("devils_advocate"),
+        temperature=config.temperature_for("devils_advocate"),
         max_retries=config.max_retries,
         timeout=config.llm_timeout,
         fallback_model=config.fallback_model,

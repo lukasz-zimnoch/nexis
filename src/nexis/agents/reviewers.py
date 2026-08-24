@@ -62,6 +62,7 @@ class ReviewerAgent(BaseAgent):
         self,
         role: ReviewerRole,
         model_name: str,
+        temperature: float | None,
         max_retries: int = 2,
         timeout: int = 120,
         fallback_model: str | None = None,
@@ -70,6 +71,7 @@ class ReviewerAgent(BaseAgent):
             model_name=model_name,
             output_schema=Review,
             system_prompt=REVIEWER_PROMPTS[role],
+            temperature=temperature,
             max_retries=max_retries,
             timeout=timeout,
             fallback_model=fallback_model,
@@ -88,6 +90,7 @@ class ReviewerAgent(BaseAgent):
 def create_reviewer(
     role: ReviewerRole,
     model_name: str,
+    temperature: float | None,
     max_retries: int = 2,
     timeout: int = 120,
     fallback_model: str | None = None,
@@ -96,6 +99,7 @@ def create_reviewer(
     return ReviewerAgent(
         role=role,
         model_name=model_name,
+        temperature=temperature,
         max_retries=max_retries,
         timeout=timeout,
         fallback_model=fallback_model,
