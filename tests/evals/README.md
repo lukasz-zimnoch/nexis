@@ -21,6 +21,24 @@ They measure whether a reviewer agrees with that person, which is not the same
 as measuring whether the reviewer is right. Read the numbers with that in mind,
 and reread `label_rationale` before you trust a miss.
 
+### What the moat labels ask for
+
+The moat bands split on whether an idea's structure builds defensibility as the
+business matures, not on whether it holds any today. None of these businesses
+exists, so none of them holds a moat now, and a reviewer that scores the present
+state puts every idea near the floor.
+
+Four label rationales carry the distinctions the bands rely on, and a reviewer
+that misses any one of them will disagree with the labels in a readable way:
+
+- A regulatory barrier counts when this business must pay it to sell at all, and
+  not when somebody else's compliance is the product being sold.
+- A network effect that restarts in each new city or segment is weak, however
+  real it is inside one.
+- Where an established competitor already holds the position, the moat is theirs.
+- Operational data that piles up from ordinary use is a moat even when it builds
+  slowly and the software around it is dull.
+
 To change a label, edit the line and run `pytest tests/test_evals/test_dataset.py`.
 The guards there check that the file stays large enough, that every role keeps
 enough bands to read a hit rate from, and that no band collapses to one point.

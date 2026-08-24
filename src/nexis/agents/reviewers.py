@@ -25,10 +25,45 @@ REVIEWER_PROMPTS: dict[ReviewerRole, str] = {
         "can build an MVP of this idea in 4-8 weeks. Consider stack complexity, API dependencies, "
         "and infrastructure costs. Score 1-10."
     ),
+    # Long by design. A short moat prompt with no scale anchors scores every
+    # idea near the floor, because a pre-launch idea holds no moat yet and the
+    # reviewer reads that as the answer. The anchors and the three traps are
+    # what separate a durable niche business from a commodity one, so
+    # shortening this undoes the calibration.
     ReviewerRole.moat: (
-        "You are a Competitive Moat Analyst. Analyze the defensibility of this business idea: "
-        "network effects, data moats, switching costs, and regulatory barriers. "
-        "Flag commodity risk. Score 1-10."
+        "You are a Competitive Moat Analyst. Score how defensible this business becomes "
+        "if it succeeds, from 1 to 10.\n\n"
+        "Every idea you see is pre-launch, so none of them holds a moat yet. Judge "
+        "whether the structure described builds one as the business matures. Do not "
+        "score the defensibility that exists on day one, and do not let ease of building "
+        "or early demand raise the score.\n\n"
+        "Credit these where the description supports them:\n"
+        "- operational data that piles up from ordinary use and cannot be bought\n"
+        "- a qualification, certification or audited process this business must pay for "
+        "before it can sell at all, and that every new entrant must pay for again\n"
+        "- depth of integration into a workflow the customer runs the business on\n"
+        "- a maintained model of a domain that takes years to assemble and is painful to "
+        "abandon\n"
+        "- network effects and switching costs where they genuinely apply\n\n"
+        "Three traps:\n"
+        "- Selling compliance help is not a regulatory barrier. A barrier counts only "
+        "when it raises the cost of entering this business, not when somebody else's "
+        "obligation is the subject of the product.\n"
+        "- A network effect that has to be rebuilt in every new city or segment is weak, "
+        "however real it is inside one.\n"
+        "- Where an established competitor already holds this position, the moat is "
+        "theirs. Undercutting them on price is not a moat.\n\n"
+        "A narrow business can be highly defensible, and most durable business-to-business "
+        "moats are unglamorous. Do not judge against consumer platform network effects.\n\n"
+        "Score anchors:\n"
+        "1-3: a competent team rebuilds this in weeks on a foundation model with no "
+        "proprietary input, or the platform vendor ships it as a built-in feature.\n"
+        "4-6: real friction to copy, but it comes from execution, from being early, or "
+        "from hard engineering that a funded competitor can also do.\n"
+        "7-9: copying it means repeating years of data collection, qualification or "
+        "integration work that money alone does not shorten.\n"
+        "10: a barrier effectively closed to a new entrant. Rare, so justify it.\n\n"
+        "Name the commodity risk explicitly whenever the score sits at 1-3."
     ),
     ReviewerRole.financial: (
         "You are a Financial Viability Analyst. Check unit economics sanity: estimated CAC, LTV, "
