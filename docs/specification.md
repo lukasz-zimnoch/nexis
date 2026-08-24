@@ -392,7 +392,7 @@ A label is a band and never a single value. A human can say that an obviously co
 
 **Variance** asks whether a reviewer agrees with itself. The same ideas run N times, and the report gives the standard deviation of the score per role. This needs at least two repeats; one repeat produces an empty variance report rather than a zero.
 
-**Collection is separate from analysis.** `collect` calls the models and appends every answer to `reviews.jsonl` as it arrives. `report` reads that directory, calls no API, and exits non-zero when a role misses the gate. Changing a metric, a band or a threshold therefore costs nothing, and an interrupted run keeps the answers it paid for. A manifest is written before the first call, so a run that dies halfway stays analysable.
+**Collection is separate from analysis.** `collect` calls the models and appends every answer to `reviews.jsonl` as it arrives. `report` reads that directory, calls no API, and exits non-zero when a role misses the gate. It also names any role whose answers came from a prompt or a model that the code no longer uses, because an answer is evidence about what produced it and about nothing else; that note explains the numbers rather than judging them, so it leaves the exit code alone. Changing a metric, a band or a threshold therefore costs nothing, and an interrupted run keeps the answers it paid for. A manifest is written before the first call, so a run that dies halfway stays analysable.
 
 **An eval never runs Layer 1.** The ideas are frozen, which holds every variable except the reviewer and keeps the search API out of the loop.
 

@@ -18,6 +18,7 @@ from nexis.config import PipelineConfig
 from nexis.evals import metrics, report
 from nexis.evals.dataset import DEFAULT_DATASET_PATH, count_labels, load_dataset
 from nexis.evals.runner import SpendLimitExceeded, collect, load_manifest, load_records
+from nexis.evals.staleness import staleness_notes
 
 # The reviewers read frozen ideas, so the research prompt never reaches a model.
 UNUSED_RESEARCH_PROMPT = "not used: the eval reviews a frozen dataset"
@@ -106,9 +107,17 @@ def _run_report(args: argparse.Namespace) -> int:
     calibration_report = metrics.calibration(records, labelled)
     variance_report = metrics.variance(records)
     failures = metrics.gate(calibration_report, args.min_hit_rate)
+    stale_notes = staleness_notes(
+        manifest, records, PipelineConfig(research_prompt=UNUSED_RESEARCH_PROMPT)
+    )
 
     text = report.render(
-        manifest, calibration_report, variance_report, args.min_hit_rate, failures
+        manifest,
+        calibration_report,
+        variance_report,
+        args.min_hit_rate,
+        failures=failures,
+        stale_notes=stale_notes,
     )
     if args.out:
         Path(args.out).write_text(text, encoding="utf-8")

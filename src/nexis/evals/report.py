@@ -167,14 +167,34 @@ def render_variance(report: VarianceReport) -> list[str]:
     return lines
 
 
+def render_staleness(stale_notes: list[str]) -> list[str]:
+    """Render the warning that these answers came from code that has changed."""
+    if not stale_notes:
+        return []
+    lines = ["**Stale run.** These answers no longer describe the current code:", ""]
+    lines.extend(f"- {note}" for note in stale_notes)
+    lines.append("")
+    lines.append(
+        "Every number below still describes what was collected. Collect again "
+        "before reading any of it as a statement about the code as it stands."
+    )
+    return lines
+
+
 def render(
     manifest: RunManifest,
     calibration_report: CalibrationReport,
     variance_report: VarianceReport,
     min_hit_rate: float,
+    *,
     failures: list[str],
+    stale_notes: list[str],
 ) -> str:
-    """Render the whole report, gate verdict first."""
+    """Render the whole report, gate verdict first.
+
+    The staleness notes sit beside the verdict rather than in it. They do not say
+    the reviewers are wrong, they say the answers are old.
+    """
     lines = ["# Reviewer eval", ""]
     if failures:
         lines.append("**Gate failed.**")
@@ -183,6 +203,11 @@ def render(
     else:
         lines.append("**Gate passed.** Every role reached the required hit rate.")
     lines.append("")
+
+    stale = render_staleness(stale_notes)
+    if stale:
+        lines.extend(stale)
+        lines.append("")
 
     lines.extend(render_calibration(calibration_report, min_hit_rate))
     lines.append("")
