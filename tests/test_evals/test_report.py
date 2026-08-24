@@ -74,7 +74,12 @@ class TestRender:
         labelled = [make_labelled("a", moat=(1, 3))]
         records = calibration([], labelled)
         text = report_module.render(
-            make_manifest(), records, variance([]), MIN_HIT_RATE, []
+            make_manifest(),
+            records,
+            variance([]),
+            MIN_HIT_RATE,
+            failures=[],
+            stale_notes=[],
         )
         assert text.splitlines()[2].startswith("**Gate passed.**")
 
@@ -84,7 +89,8 @@ class TestRender:
             calibration([], []),
             variance([]),
             MIN_HIT_RATE,
-            ["moat: 20% below", "risk: 30% below"],
+            failures=["moat: 20% below", "risk: 30% below"],
+            stale_notes=[],
         )
         assert "**Gate failed.**" in text
         assert "- moat: 20% below" in text
@@ -92,7 +98,12 @@ class TestRender:
 
     def test_both_cost_columns_appear(self):
         text = report_module.render(
-            make_manifest(), calibration([], []), variance([]), MIN_HIT_RATE, []
+            make_manifest(),
+            calibration([], []),
+            variance([]),
+            MIN_HIT_RATE,
+            failures=[],
+            stale_notes=[],
         )
         assert "| Projected | Measured |" in text
         assert "0.0067" in text
@@ -103,14 +114,24 @@ class TestRender:
             measured_calls=None, measured_cost_usd=None, completed_at=None
         )
         text = report_module.render(
-            manifest, calibration([], []), variance([]), MIN_HIT_RATE, []
+            manifest,
+            calibration([], []),
+            variance([]),
+            MIN_HIT_RATE,
+            failures=[],
+            stale_notes=[],
         )
         assert "this run did not finish" in text
         assert "n/a" in text
 
     def test_variance_says_why_it_is_empty(self):
         text = report_module.render(
-            make_manifest(), calibration([], []), variance([]), MIN_HIT_RATE, []
+            make_manifest(),
+            calibration([], []),
+            variance([]),
+            MIN_HIT_RATE,
+            failures=[],
+            stale_notes=[],
         )
         assert "--repeats 2 or more" in text
 
@@ -134,7 +155,8 @@ class TestRender:
             calibration_report,
             variance(records),
             MIN_HIT_RATE,
-            gate(calibration_report, MIN_HIT_RATE),
+            failures=gate(calibration_report, MIN_HIT_RATE),
+            stale_notes=[],
         )
         assert "### Misses" in text
         assert "| a | moat | 1 | 9 | 1-3 | 6 |" in text
@@ -156,7 +178,12 @@ class TestRender:
         ]
         calibration_report = calibration(records, labelled)
         text = report_module.render(
-            make_manifest(), calibration_report, variance(records), MIN_HIT_RATE, []
+            make_manifest(),
+            calibration_report,
+            variance(records),
+            MIN_HIT_RATE,
+            failures=[],
+            stale_notes=[],
         )
         assert "10 further misses" in text
 
