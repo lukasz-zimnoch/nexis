@@ -30,6 +30,7 @@ prompted them, the alternatives considered, and the trade-offs accepted.
 | [0016](0016-untrusted-web-content-trust-boundary.md) | Trust Boundary for Web Content in Prompts | Accepted | 2026-08-17 |
 | [0017](0017-per-run-cost-and-token-metrics.md) | Per-Run Cost and Token Metrics | Accepted | 2026-08-18 |
 | [0018](0018-band-gated-reviewer-evals.md) | Band-Gated Reviewer Evals | Accepted | 2026-08-18 |
+| [0019](0019-per-agent-sampling-policy.md) | Sampling Temperature is a Per-Agent Policy | Accepted | 2026-08-24 |
 
 ## How to Add a New ADR
 

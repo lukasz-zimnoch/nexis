@@ -166,7 +166,7 @@ class ReviewSynthesizer:
     ) -> tuple[dict[str, float], list[str]]:
         """Compute weighted scores, filter by threshold, and return top_k ideas.
 
-        Scoring formula (spec §6.2):
+        Scoring formula (spec §4.2):
             score = sum(weight_i * score_i * confidence_i) / 10
 
         Returns:
