@@ -87,38 +87,85 @@ The UI submits the job, then polls until it ends.
 
 ## How it is built
 
-Six choices that shape the code more than the rest:
+### The graph
 
-- **Two kinds of parallelism.** `Send()` fans out graph nodes and
-  `asyncio.gather()` fans out coroutines inside one node. Eight ideas open 48
-  concurrent reviewer calls. See [ADR-0003](docs/adr/0003-hybrid-parallelism-send-and-gather.md).
-- **Failure is the normal case.** An agent retries on its own bad output and is
-  told what was wrong. A timeout moves it to a fallback model. A spent retry
-  budget returns a partial result with `failure_reason` set, never an
-  exception. See [ADR-0007](docs/adr/0007-graceful-degradation-failure-reason.md).
-- **The ranking runs no LLM.** The synthesizer is arithmetic over the reviewer
-  scores, so one set of reviews always gives one ranking. A regression test
-  freezes the formula. See [ADR-0010](docs/adr/0010-deterministic-weighted-scoring.md).
-- **One model and one temperature per agent.** Both tables live in one file
-  each, and an agent with no temperature fails to construct. Reviewers sit at
-  0.0 because they measure; the research agent sits at 1.0 because it invents.
-  See [ADR-0005](docs/adr/0005-per-agent-model-specialization.md) and
-  [ADR-0019](docs/adr/0019-per-agent-sampling-policy.md).
-- **Every call lands in a run total.** Tokens, cost and time, split by layer and
-  by agent, stored with the job and rendered next to the report. See
-  [ADR-0017](docs/adr/0017-per-run-cost-and-token-metrics.md).
-- **Web text is untrusted data.** Anyone who can publish a page can otherwise
-  write into a prompt. Web text is cleaned, capped and wrapped in markers it
-  cannot forge, under a rule the agent's system prompt carries. See
-  [ADR-0016](docs/adr/0016-untrusted-web-content-trust-boundary.md).
+Each layer is its own LangGraph subgraph. It compiles alone and it runs in a
+test alone. The parent `StateGraph` wires the four together and owns the state
+they share.
 
-The review panel is the one part whose output no type can check, so it gets
-measured against a hand-labelled dataset. Each label is a score **band**, not a
-number. Two people who agree that an idea is commoditised still disagree on
-whether that is a 2 or a 3. The evals call real models, so they are manual,
-spend-capped, and never run on a pull request. See
-[specification §5](docs/specification.md#5-reviewer-evals) and
-[ADR-0018](docs/adr/0018-band-gated-reviewer-evals.md).
+Nothing crosses a node boundary as a loose dict. Every agent takes a Pydantic
+model and returns one, and every call that must come back structured binds to
+that model with `with_structured_output()`. The graph state is a `TypedDict`,
+and a reducer on each field says how two parallel branches merge into it.
+
+An agent is more than a prompt. Each one names its own model and its own
+sampling temperature, in one table each. The reviewers sit at 0.0 because they
+measure. The research agent sits at 1.0 because it invents. An agent with no
+temperature assigned fails to construct, so the two tables cannot drift apart.
+
+Parallelism comes in two forms, because the two problems differ. `Send()` fans
+out graph nodes, so Layer 2 opens one node per idea and per role: eight ideas
+start 48 reviewer calls at once. `asyncio.gather()` fans out coroutines inside
+a single node, which is how one idea gets its MVP plan and its GTM plan at the
+same time.
+
+### Failure is the normal case
+
+A run makes tens of model calls, so some call fails in most runs. Nothing here
+treats that as exceptional.
+
+An agent that returns bad output gets the validation error appended to its own
+message list. It then answers the specific complaint, not the same prompt
+twice. An agent that times out rebuilds its client on a fallback model and
+spends the tries it has left there, at the same temperature. An agent that runs
+out of tries returns a partial result with `failure_reason` set. It never
+raises, and every consumer reads that field before it uses the result.
+
+The graph solves the layer-level version of the same problem. When no idea
+clears the score threshold, the run returns to research with the titles it
+already saw marked as exclusions. When the retries run out it force-passes the
+best of what it has, so a run always ends in a report.
+
+### Numbers you can check
+
+The review panel is the one part whose output no type can check, so two
+separate mechanisms hold it down.
+
+The ranking runs no model at all. The synthesizer is a weighted average over
+the reviewer scores, so one set of reviews always gives one ranking. A
+regression test freezes the formula against stored values.
+
+The reviewers are measured against a hand-labelled dataset. Each label is a
+score **band**, not a number. Two people who agree that an idea is
+commoditised still disagree on whether that is a 2 or a 3. Calibration asks
+whether a reviewer agrees with a human. Variance asks whether it agrees with
+itself. Both call real models, so both are manual, spend-capped, and never run
+on a pull request.
+
+Every model call lands in a run total. Tokens, cost and wall time, split by
+layer and by agent, land with the job and appear next to the report.
+
+### Around the pipeline
+
+Web text is untrusted data. Anyone who can publish a page can otherwise write
+instructions into a prompt. Search results are cleaned, capped, and wrapped in
+markers a page cannot forge, under a rule that the agent's system prompt
+carries.
+
+The deployment is declared, not clicked. Terraform holds every GCP resource. A
+push to `master` builds the image, and GitHub Actions deploys it through
+Workload Identity Federation with no long-lived key. The API and the SPA share
+one Cloud Run Service that scales to zero. The pipeline runs apart from it, as
+a Cloud Run Job that writes to Firestore. A ten-minute run does not belong
+inside an HTTP request.
+
+Nothing under `tests/` calls a real model, so the suite runs in CI with no API
+key and no spend.
+
+Every choice above has an Architecture Decision Record in
+[`docs/adr/`](docs/adr/), with the alternatives that lost and the trade-off
+accepted. [`docs/specification.md`](docs/specification.md) holds the full
+detail.
 
 ## Documentation
 
