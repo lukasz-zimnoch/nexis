@@ -48,6 +48,7 @@ async def trend_scanner_node(state: ResearchLayerState) -> dict:
 
     agent = TrendScanner(
         model_name=config.model_for("trend_scanner"),
+        temperature=config.temperature_for("trend_scanner"),
         max_retries=config.max_retries,
         timeout=config.llm_timeout,
         fallback_model=config.fallback_model,
@@ -72,6 +73,7 @@ async def research_agent_node(state: ResearchLayerState) -> dict:
 
     agent = ResearchAgent(
         model_name=config.model_for("research_agent"),
+        temperature=config.temperature_for("research_agent"),
         max_retries=config.max_retries,
         timeout=config.llm_timeout,
         fallback_model=config.fallback_model,
@@ -104,6 +106,7 @@ async def niche_validator_node(state: ResearchLayerState) -> dict:
 
     agent = NicheValidator(
         model_name=config.model_for("niche_validator"),
+        temperature=config.temperature_for("niche_validator"),
         max_retries=config.max_retries,
         timeout=config.llm_timeout,
         fallback_model=config.fallback_model,

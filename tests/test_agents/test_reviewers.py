@@ -109,7 +109,9 @@ async def test_reviewer_returns_correct_role_market(mock_llm_chain, idea_a):
     )
     mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(expected_review))
 
-    agent = ReviewerAgent(role=ReviewerRole.market, model_name="claude-sonnet-4-6")
+    agent = ReviewerAgent(
+        role=ReviewerRole.market, model_name="claude-sonnet-4-6", temperature=0.0
+    )
     result = await agent.invoke_review(idea_a)
 
     assert result.reviewer_role == ReviewerRole.market
@@ -130,7 +132,9 @@ async def test_reviewer_returns_correct_role_technical(mock_llm_chain, idea_a):
     )
     mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(expected_review))
 
-    agent = ReviewerAgent(role=ReviewerRole.technical, model_name="claude-sonnet-4-6")
+    agent = ReviewerAgent(
+        role=ReviewerRole.technical, model_name="claude-sonnet-4-6", temperature=0.0
+    )
     result = await agent.invoke_review(idea_a)
 
     assert result.reviewer_role == ReviewerRole.technical
@@ -150,7 +154,9 @@ async def test_reviewer_all_roles_via_factory(mock_llm_chain, idea_a):
         )
         mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(expected_review))
 
-        agent = create_reviewer(role=role, model_name="claude-sonnet-4-6")
+        agent = create_reviewer(
+            role=role, model_name="claude-sonnet-4-6", temperature=0.0
+        )
         result = await agent.invoke_review(idea_a)
 
         assert result.reviewer_role == role
@@ -169,7 +175,9 @@ async def test_reviewer_enforces_idea_id_and_role_on_success(mock_llm_chain, ide
     )
     mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(wrong_review))
 
-    agent = ReviewerAgent(role=ReviewerRole.financial, model_name="claude-sonnet-4-6")
+    agent = ReviewerAgent(
+        role=ReviewerRole.financial, model_name="claude-sonnet-4-6", temperature=0.0
+    )
     result = await agent.invoke_review(idea_a)
 
     assert result.idea_id == idea_a.id
@@ -362,7 +370,9 @@ async def test_reviewer_failed_review_retains_idea_id_and_role(mock_llm_chain, i
     )
     mock_llm_chain.ainvoke = AsyncMock(return_value=_wrap(failed_review))
 
-    agent = ReviewerAgent(role=ReviewerRole.financial, model_name="claude-sonnet-4-6")
+    agent = ReviewerAgent(
+        role=ReviewerRole.financial, model_name="claude-sonnet-4-6", temperature=0.0
+    )
     result = await agent.invoke_review(idea_a)
 
     assert result.failure_reason == "LLM timed out"

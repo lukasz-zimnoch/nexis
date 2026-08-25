@@ -194,7 +194,9 @@ async def test_devils_advocate_returns_rebuttal_with_correct_idea_id(
 
     from nexis.agents.validators import DevilsAdvocate
 
-    advocate = DevilsAdvocate(model_name="claude-sonnet-4-6", max_retries=1)
+    advocate = DevilsAdvocate(
+        model_name="claude-sonnet-4-6", temperature=0.0, max_retries=1
+    )
     result = await advocate.invoke_rebuttal(sample_business_plan)
 
     assert isinstance(result, Rebuttal)
@@ -222,7 +224,9 @@ async def test_devils_advocate_failure_raises(
 
     from nexis.agents.validators import DevilsAdvocate
 
-    advocate = DevilsAdvocate(model_name="claude-sonnet-4-6", max_retries=0)
+    advocate = DevilsAdvocate(
+        model_name="claude-sonnet-4-6", temperature=0.0, max_retries=0
+    )
     result = await advocate.invoke_rebuttal(sample_business_plan)
     assert result.failure_reason is not None
     assert "LLM unavailable" in result.failure_reason

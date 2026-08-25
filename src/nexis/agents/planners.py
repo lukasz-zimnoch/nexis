@@ -18,6 +18,7 @@ class MVPArchitect(BaseAgent):
     def __init__(
         self,
         model_name: str,
+        temperature: float | None,
         max_retries: int = 2,
         timeout: int = 120,
         fallback_model: str | None = None,
@@ -30,6 +31,7 @@ class MVPArchitect(BaseAgent):
                 "minimum viable product: core features using MoSCoW prioritization, recommended "
                 "tech stack, data model description, 4-8 week sprint plan, and estimated build cost."
             ),
+            temperature=temperature,
             max_retries=max_retries,
             timeout=timeout,
             fallback_model=fallback_model,
@@ -51,6 +53,7 @@ class GTMStrategist(BaseAgent):
     def __init__(
         self,
         model_name: str,
+        temperature: float | None,
         max_retries: int = 2,
         timeout: int = 120,
         fallback_model: str | None = None,
@@ -64,6 +67,7 @@ class GTMStrategist(BaseAgent):
                 "acquisition channels, pricing model, phased launch sequence, and first 100 "
                 "customers playbook."
             ),
+            temperature=temperature,
             max_retries=max_retries,
             timeout=timeout,
             fallback_model=fallback_model,
@@ -96,6 +100,7 @@ class BusinessPlanComposer(BaseAgent):
     def __init__(
         self,
         model_name: str,
+        temperature: float | None,
         max_retries: int = 2,
         timeout: int = 120,
         fallback_model: str | None = None,
@@ -108,6 +113,7 @@ class BusinessPlanComposer(BaseAgent):
                 "cohesive business plan with an executive summary, key assumptions, and "
                 "success metrics."
             ),
+            temperature=temperature,
             max_retries=max_retries,
             timeout=timeout,
             fallback_model=fallback_model,

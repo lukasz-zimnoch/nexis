@@ -73,6 +73,9 @@ class RunManifest(BaseModel):
     ideas: int
     repeats: int
     models: dict[str, str]
+    temperatures: dict[str, float | None] = {}
+    # Empty when the run predates this field. A manifest that never recorded a
+    # temperature cannot report one, so the staleness check skips it.
     price_table_date: str
     started_at: str
     projected_calls: int
@@ -91,6 +94,14 @@ def models_for_roles(
         return {role.value: override for role in ReviewerRole}
     return {
         role.value: config.model_for(f"reviewer_{role.value}") for role in ReviewerRole
+    }
+
+
+def temperatures_for_roles(config: PipelineConfig) -> dict[str, float | None]:
+    """Return the sampling temperature each reviewer role uses."""
+    return {
+        role.value: config.temperature_for(f"reviewer_{role.value}")
+        for role in ReviewerRole
     }
 
 
@@ -166,6 +177,7 @@ async def collect(
         raise ValueError("repeats must be at least 1")
 
     models = models_for_roles(config, model_override)
+    temperatures = temperatures_for_roles(config)
     projected_calls, projected_usd = project_cost(models, len(labelled), repeats)
     if projected_usd > max_usd:
         raise SpendLimitExceeded(
@@ -192,6 +204,7 @@ async def collect(
         ideas=len(labelled),
         repeats=repeats,
         models=models,
+        temperatures=temperatures,
         price_table_date=PRICE_TABLE_DATE,
         started_at=datetime.now(timezone.utc).isoformat(),
         projected_calls=projected_calls,
@@ -218,6 +231,7 @@ async def collect(
                         reviewer_factory(
                             role=role,
                             model_name=models[role.value],
+                            temperature=temperatures[role.value],
                             max_retries=config.max_retries,
                             timeout=config.llm_timeout,
                             fallback_model=config.fallback_model,

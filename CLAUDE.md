@@ -27,6 +27,7 @@ See the [specification](docs/specification.md) for full architecture, data contr
 - Async-first: all agent methods should be `async def` and use `asyncio.gather()` for concurrency
 - Web text reaches a prompt only through `src/nexis/untrusted.py`: sanitize each result, wrap it with `wrap_untrusted()`, and append `UNTRUSTED_DATA_RULE` to the agent's system prompt (ADR-0016, specification §5.7)
 - Every LLM call goes through `BaseAgent`, so it lands in the run totals. Open a run scope with `run_context()` at an entry point, and keep model prices in `src/nexis/pricing.py` (ADR-0017, specification §8.3)
+- Every agent declares a sampling temperature; there is no default. Pick the band in `src/nexis/sampling.py` from the agent's job: `MEASUREMENT` when it judges or extracts, `DIVERGENCE` when it must produce variety (ADR-0019, specification §7.3)
 - Nothing under `tests/` may call a real model. Work that needs real answers belongs behind `python -m nexis.evals`, which is manual and spend-capped (ADR-0018, specification §6.4)
 
 ## Checkpointer
