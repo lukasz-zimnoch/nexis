@@ -134,14 +134,21 @@ Engineering notes:
 - **The ranking is arithmetic, not a model call.** A weighted average of the
   review scores gives the same ranking for the same reviews every time. A test
   pins the formula to stored values.
+- **The review panel is measured against human labels.** A frozen dataset
+  gives each idea a score band per reviewer role. A band, not a number: two
+  readers who agree that an idea is commoditised still split on a 2 or a 3.
+  Calibration counts how often a role lands inside its band, and the gate
+  fails below a minimum share. Variance reruns the same ideas and reports the
+  spread of one role across repeats. Both call real models, so they run by
+  hand under a spend cap.
 - **Web text reaches a prompt as data, never as instruction.** Search results
   lose their control characters, get cut to a fixed length, and sit inside
   markers that a page cannot fake.
 - **Each run reports its own cost.** The run stores tokens, dollars and
   latency, split by layer and by agent, and the UI shows them next to the
   report.
-- **The test suite calls no model.** It runs in CI with no API key. The
-  reviewer evals do call real models, so they run by hand under a spend cap.
+- **The test suite calls no model.** It runs in CI with no API key, so a pull
+  request costs nothing to check.
 
 ## Documentation
 
