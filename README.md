@@ -94,46 +94,54 @@ The service does not. It starts the batch job and returns.
 ```mermaid
 flowchart LR
     U([user]) --> SPA["React SPA"]
-    SPA <-->|"ID token"| API["FastAPI service<br/>Cloud Run"]
+    SPA <-->|"ID token"| API["FastAPI service"]
     API <-->|"job document"| FS[("Firestore")]
-    API -->|"starts"| JOB["Batch job<br/>Cloud Run Job"]
-    JOB --> G["LangGraph pipeline<br/>four layers of agents"]
-    G -->|"OpenRouter"| LLM[["LLM providers"]]
-    G -->|"Tavily"| WEB[["web search"]]
+    API -->|"starts"| JOB["Batch job"]
+    JOB --> PIPE["LangGraph pipeline"]
+    PIPE -->|"every model call"| OR[["OpenRouter"]]
+    PIPE -->|"search and trends"| TAV[["Tavily"]]
     JOB -->|"report and run cost"| FS
 ```
 
 | Component | Built with | Does |
 |---|---|---|
-| **Pipeline graph** | LangGraph `StateGraph` | Compiles one subgraph per layer, plus the supervisor, retry and force-pass nodes, and routes between them |
-| **Agents** | LangChain, Pydantic v2, OpenRouter | One class per role. Each names its own model and sampling temperature, and returns a validated object |
-| **Tools** | Tavily, HTTP scrapers | Web search and trend signals. Every fetched string passes one sanitizer before it reaches a prompt |
-| **Scoring** | plain Python | A weighted average over the reviews. No model call, and a regression test freezes the formula |
-| **API service** | FastAPI, Firebase Auth | Job endpoints behind an ID token. Also serves the built SPA |
-| **Batch job** | Cloud Run Job | Runs one pipeline to the end and writes the report and the run cost to Firestore |
-| **Web UI** | React 18, Vite, TypeScript | Submits a job, polls it, renders the report and the cost panel |
-| **Infrastructure** | Terraform, Cloud Run, Firestore | Every resource declared in code. GitHub Actions deploys the image through Workload Identity Federation |
+| **React SPA** | React 18, Vite, TypeScript | Signs the user in, submits a job, polls it, renders the report and the cost panel |
+| **FastAPI service** | FastAPI, Firebase Auth | Checks the ID token on every `/api` route, records the job, starts the batch job, serves the built SPA |
+| **Firestore** | Firestore, native mode | One document per job: the config, the status, the report, the run cost |
+| **Batch job** | Cloud Run Job | Runs one pipeline to the end, then writes the report and the cost back to the job document |
+| **LangGraph pipeline** | LangGraph `StateGraph` | The four layer subgraphs of agents, and the nodes that retry or force-pass between them |
+| **OpenRouter** | OpenRouter API | One key and one base URL in front of every model vendor |
+| **Tavily** | Tavily API | The web search and the trend scan that Layer 1 reads |
 
-A run never blocks a request. The service writes a job document before it
-starts the job, and the SPA polls that document until the job ends.
+A run never blocks a request. The service writes the job document before it
+starts the batch job, and the SPA polls that document until the job ends.
 
-What holds the pipeline together:
+Terraform declares every resource above. GitHub Actions builds the image and
+deploys it through Workload Identity Federation, with no long-lived key.
 
-- **Typed at every boundary.** Agents take and return Pydantic models. A bad
-  answer fails validation, and the agent retries against that error rather
-  than against the same prompt.
-- **Nothing raises.** An agent out of retries returns a partial result with
-  `failure_reason` set, so one dead call cannot end the run.
-- **Width decided at run time.** Layer 1 sets the idea count, `Send()` opens a
-  branch per idea and per role, and per-field reducers merge them back.
-- **The ranking uses no model,** so one set of reviews always gives one
-  ranking, and a frozen test catches any change to the formula.
-- **Web text is data, never instruction.** It is stripped, capped and wrapped
-  in markers a page cannot forge before any prompt sees it.
-- **Every run prices itself.** Tokens, cost and latency, split by layer and by
-  agent, stored with the job.
-- **No test calls a real model.** The reviewer evals do, so they run by hand
-  under a spend cap.
+Engineering notes:
+
+- **Agents exchange objects, not text.** Each agent takes a Pydantic model and
+  returns one, and the model schema is bound to the LLM call. An answer that
+  does not fit the schema fails validation before any code reads it. The agent
+  then retries with that validation error added to the conversation.
+- **A failed agent returns a result, not an exception.** When its retries run
+  out, it returns a valid object with `failure_reason` set. A review that
+  failed is left out of the average, and the run carries on.
+- **The number of parallel branches is decided at run time.** Layer 1 chooses
+  how many ideas exist, so Layer 2 opens one branch per idea and per reviewer.
+  Each state field declares how to merge those branches back.
+- **The ranking is arithmetic, not a model call.** A weighted average of the
+  review scores gives the same ranking for the same reviews every time. A test
+  pins the formula to stored values.
+- **Web text reaches a prompt as data, never as instruction.** Search results
+  lose their control characters, get cut to a fixed length, and sit inside
+  markers that a page cannot fake.
+- **Each run reports its own cost.** The run stores tokens, dollars and
+  latency, split by layer and by agent, and the UI shows them next to the
+  report.
+- **The test suite calls no model.** It runs in CI with no API key. The
+  reviewer evals do call real models, so they run by hand under a spend cap.
 
 ## Documentation
 
