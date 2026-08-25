@@ -87,88 +87,96 @@ The UI submits the job, then polls until it ends.
 
 ## How it is built
 
-### The graph
+The model call is the easy part of an agent system. That call can return the
+wrong shape, time out, or disagree with the last one. It can also cost real
+money and carry text a stranger wrote on a web page. Most of the code here
+answers one of those.
 
-Each layer is its own LangGraph subgraph. It compiles alone and it runs in a
-test alone. The parent `StateGraph` wires the four together and owns the state
-they share.
+**A model returns text, not a type.** Every agent takes a Pydantic model and
+returns one, and `with_structured_output()` binds that schema to the call. The
+bounds live in the type rather than in the prompt, so a `Review` with a score
+of 11 fails before any code reads it. A rejected answer is not retried blind.
+The agent appends the validation error to its own message list and asks again:
 
-Nothing crosses a node boundary as a loose dict. Every agent takes a Pydantic
-model and returns one, and every call that must come back structured binds to
-that model with `with_structured_output()`. The graph state is a `TypedDict`,
-and a reducer on each field says how two parallel branches merge into it.
+```python
+messages.append(HumanMessage(
+    content=f"The previous response failed validation: {last_error}\nPlease fix and retry."
+))
+```
 
-An agent is more than a prompt. Each one names its own model and its own
-sampling temperature, in one table each. The reviewers sit at 0.0 because they
-measure. The research agent sits at 1.0 because it invents. An agent with no
-temperature assigned fails to construct, so the two tables cannot drift apart.
+The second attempt answers the specific complaint, not the same prompt twice.
 
-Parallelism comes in two forms, because the pipeline fans out for two different
-reasons.
+**The pipeline does not know its own width until it runs.** Layer 1 decides how
+many ideas exist, so the graph cannot declare its shape when it compiles. Layer
+2 emits one `Send()` per idea and per role, which turns eight ideas into 48
+reviewer nodes in one step. Those branches write to the same state at the same
+time and never collide, because each field declares how to merge:
 
-The first reason is a branch count nobody knows in advance. Layer 1 decides how
-many ideas exist, so the graph cannot declare its own shape up front. `Send()`
-answers that: it dispatches one graph node per idea and per role, so eight
-ideas start 48 reviewer calls at once. Each branch writes its result back into
-shared state through a reducer, and LangGraph fans them in on its own.
+```python
+class PipelineState(TypedDict):
+    ideas: Annotated[list[BusinessIdea], operator.add]
+    reviews: Annotated[list[Review], operator.add]
+    scores: Annotated[dict[str, float], merge_dicts]
+```
 
-The second reason is a fixed set of calls that one step needs finished before
-it continues. `asyncio.gather()` answers that. The MVP Architect and the GTM
-Strategist run together inside a single node, because the composer needs both
-plans. One node also means two graph branches cannot write over each other.
+`asyncio.gather()` covers the other case, a fixed set of calls that one node
+needs before it continues. The MVP Architect and the GTM Strategist run
+together inside a single node, because the composer needs both plans.
 
-### Failure is the normal case
+**A call fails more often than you would like.** No model failure raises. An
+agent that times out rebuilds its client on a fallback model. It spends the
+tries it has left there, at the same temperature, so a degraded run does not
+also become a differently calibrated one. An agent that runs out of tries
+returns a valid instance with `failure_reason` set, and every consumer reads
+that field before the result. A failed reviewer drops out of the weighted
+average, and its idea keeps the scores that did arrive. The same rule holds one
+level up: when no idea clears the threshold, the graph retries research with
+the titles it already saw excluded, then force-passes the best of what it has.
+A run always ends in a report.
 
-A run makes tens of model calls, so some call fails in most runs. Nothing here
-treats that as exceptional.
+**A judgement drifts, and nobody notices.** The ranking never asks a model. It
+is a weighted average over the reviewer scores:
 
-An agent that returns bad output gets the validation error appended to its own
-message list. It then answers the specific complaint, not the same prompt
-twice. An agent that times out rebuilds its client on a fallback model and
-spends the tries it has left there, at the same temperature. An agent that runs
-out of tries returns a partial result with `failure_reason` set. It never
-raises, and every consumer reads that field before it uses the result.
+```
+score = Σ (weight × score × confidence) / 10
+```
 
-The graph solves the layer-level version of the same problem. When no idea
-clears the score threshold, the run returns to research with the titles it
-already saw marked as exclusions. When the retries run out it force-passes the
-best of what it has, so a run always ends in a report.
+A regression test freezes that formula against a stored panel, so one set of
+reviews always gives one ranking. Temperature is a per-agent policy for the
+same reason. The reviewers sit at 0.0 because they measure, and the research
+agent sits at 1.0 because it invents. An agent whose author picked no
+temperature fails to construct.
 
-### Numbers you can check
+The reviewers are the part no type can check, so they are measured against a
+hand-labelled dataset. Each label is a score band, never a number. Two people
+who agree that an idea is commoditised still disagree on whether that is a 2 or
+a 3. Calibration measures a reviewer against the human label. Variance measures
+the same reviewer against its own repeats. Both call real models, so both stay
+manual, spend-capped and off the pull request path.
 
-The review panel is the one part whose output no type can check, so two
-separate mechanisms hold it down.
+**A web page can talk to your model.** Text a tool fetched is untrusted data.
+Text an agent produced is pipeline data. That is the boundary, and web text
+crosses it through one module. The text loses every control character and every
+copy of the marker strings. That module then cuts it to a fixed length and
+wraps it in markers it can no longer forge. The agent's system prompt carries a
+rule that names both markers. It states that the text between them is data to
+read, never instructions to follow. The rule raises the cost of an injection.
+It does not prove the model obeys, and the specification says so.
 
-The ranking runs no model at all. The synthesizer is a weighted average over
-the reviewer scores, so one set of reviews always gives one ranking. A
-regression test freezes the formula against stored values.
+**Every run accounts for itself.** Tokens, cost and wall time land in one total
+per run, split by layer and by agent. The job stores that total, and the UI
+renders it beside the report. Cost comes from a dated price table. A model the
+table does not list is named in the output, never counted as free. Each
+agent's system prompt is hashed, and the digest travels with the run, so two
+runs compare only when they ran the same instructions.
 
-The reviewers are measured against a hand-labelled dataset. Each label is a
-score **band**, not a number. Two people who agree that an idea is
-commoditised still disagree on whether that is a 2 or a 3. Calibration asks
-whether a reviewer agrees with a human. Variance asks whether it agrees with
-itself. Both call real models, so both are manual, spend-capped, and never run
-on a pull request.
-
-Every model call lands in a run total. Tokens, cost and wall time, split by
-layer and by agent, land with the job and appear next to the report.
-
-### Around the pipeline
-
-Web text is untrusted data. Anyone who can publish a page can otherwise write
-instructions into a prompt. Search results are cleaned, capped, and wrapped in
-markers a page cannot forge, under a rule that the agent's system prompt
-carries.
-
-The deployment is declared, not clicked. Terraform holds every GCP resource. A
-push to `master` builds the image, and GitHub Actions deploys it through
-Workload Identity Federation with no long-lived key. The API and the SPA share
-one Cloud Run Service that scales to zero. The pipeline runs apart from it, as
-a Cloud Run Job that writes to Firestore. A ten-minute run does not belong
-inside an HTTP request.
-
-Nothing under `tests/` calls a real model, so the suite runs in CI with no API
-key and no spend.
+**And it ships.** Terraform declares every GCP resource. A push to `master`
+builds the image, and GitHub Actions deploys it through Workload Identity
+Federation with no long-lived key. The API and the SPA share one Cloud Run
+Service that scales to zero. The pipeline runs beside it as a Cloud Run Job
+that writes to Firestore, because a ten-minute run does not belong inside an
+HTTP request. Nothing under `tests/` calls a real model, so the whole suite
+runs in CI with no API key and no spend.
 
 Every choice above has an Architecture Decision Record in
 [`docs/adr/`](docs/adr/), with the alternatives that lost and the trade-off

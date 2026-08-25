@@ -21,7 +21,7 @@ guessing.
 | `src/nexis/sampling.py` | The temperature per agent, and the bands. | Change how much spread an agent gets |
 | `src/nexis/pricing.py` | The dated price table the cost estimate reads. | Add a model, or the run will not price it |
 | `src/nexis/state.py` | Every Pydantic contract and the graph state. | Change what an agent sends or returns |
-| [`README.md`](README.md) | The public introduction. Points outward, holds no detail of its own. | Change what the project claims to be |
+| [`README.md`](README.md) | The public introduction and the engineering overview. Summarizes at one level, then points here for the rest. | Change what the project claims to be |
 
 Put a new fact in exactly one of these. If it belongs in two, it belongs in the
 more specific one, and the other links to it.
