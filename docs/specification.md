@@ -396,7 +396,7 @@ Default threshold: **0.55** (configurable). Ideas scoring below this are dropped
 
 §6.1 to §6.3 treat a reviewer score as a measurement. Two evals check that assumption. Both run from `nexis/evals` (ADR-0018).
 
-**Calibration** asks whether a reviewer agrees with a human. `tests/evals/dataset.jsonl` holds frozen `BusinessIdea` objects. Each carries the score band one or more roles are expected to land in, and the written reasoning behind those bands. A score inside its band is correct, and the error is the distance to the nearest edge, which is zero inside. Each role must reach a minimum share of in-band scores; the default is 70%.
+**Calibration** asks whether a reviewer agrees with a human. `tests/evals/dataset.jsonl` holds frozen `BusinessIdea` objects. Each carries the score band one or more roles are expected to land in, and the written reasoning behind those bands. A score inside its band is correct, and the error is the distance to the nearest edge, which is zero inside. Each role must reach a minimum share of in-band scores; the default is 70%. A labelled role that scored nothing fails the gate as well, because an outage that drops every call from one reviewer must not read as a passing run.
 
 A label is a band and never a single value. A human can say that an obviously commoditised idea must not score 8 for moat, and cannot say whether it is a 2 or a 3. A role carries a band only where the label writer holds a firm opinion, so an unlabelled pair is reviewed but does not gate.
 

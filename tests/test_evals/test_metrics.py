@@ -215,6 +215,32 @@ class TestGate:
         assert len(failures) == 1
         assert "nothing was checked" in failures[0]
 
+    def test_a_role_whose_every_call_failed_fails_the_gate(self):
+        """An outage that drops one reviewer must not read as a passing run."""
+        labelled = [make_labelled("a", moat=(1, 3), financial=(5, 8))]
+        records = [
+            make_record("a", "moat", 2),
+            make_record("a", "financial", None, failure_reason="provider timeout"),
+        ]
+        report = calibration(records, labelled)
+        assert [role.value for role in report.unmeasured_roles] == ["financial"]
+
+        failures = gate(report, 0.7)
+        assert len(failures) == 1
+        assert "financial" in failures[0]
+        assert "never checked" in failures[0]
+
+    def test_a_role_the_dataset_never_labels_does_not_fail_the_gate(self):
+        """The panel runs whole, but only labelled roles can gate."""
+        labelled = [make_labelled("a", moat=(1, 3))]
+        records = [
+            make_record("a", "moat", 2),
+            make_record("a", "risk", None, failure_reason="provider timeout"),
+        ]
+        report = calibration(records, labelled)
+        assert report.unmeasured_roles == []
+        assert gate(report, 0.7) == []
+
     def test_the_gate_reads_the_band_and_not_the_exact_value(self):
         """Every score differs from every other, and all of them still pass."""
         labelled = [

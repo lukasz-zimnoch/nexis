@@ -89,6 +89,24 @@ def render_calibration(report: CalibrationReport, min_hit_rate: float) -> list[s
             f"{report.failed} of {report.scored + report.failed} calls returned no "
             "score and were dropped rather than counted as a low score."
         )
+    rows = [
+        [
+            role.role.value,
+            str(role.labelled_scores),
+            str(role.in_band),
+            f"{role.hit_rate:.0%}",
+            f"{role.mean_band_distance:.2f}",
+            str(role.worst_distance),
+            f"{role.mean_score:.1f}" if role.mean_score is not None else "n/a",
+        ]
+        for role in report.by_role
+    ]
+    # A labelled role that scored nothing still gets a row. Leaving it out of the
+    # table is what let a dropped reviewer read as a passing one.
+    rows.extend(
+        [role.value, "0", "0", "no score", "n/a", "n/a", "n/a"]
+        for role in report.unmeasured_roles
+    )
     lines.extend(["", ""])
     lines.extend(
         _table(
@@ -101,22 +119,18 @@ def render_calibration(report: CalibrationReport, min_hit_rate: float) -> list[s
                 "Worst",
                 "Mean score",
             ],
-            [
-                [
-                    role.role.value,
-                    str(role.labelled_scores),
-                    str(role.in_band),
-                    f"{role.hit_rate:.0%}",
-                    f"{role.mean_band_distance:.2f}",
-                    str(role.worst_distance),
-                    f"{role.mean_score:.1f}" if role.mean_score is not None else "n/a",
-                ]
-                for role in report.by_role
-            ],
+            rows,
         )
     )
     lines.append("")
     lines.append(f"Gate: every role must reach {min_hit_rate:.0%}.")
+    if report.unmeasured_roles:
+        named = ", ".join(role.value for role in report.unmeasured_roles)
+        lines.append("")
+        lines.append(
+            f"The dataset labels {named}, and this run scored none of it. A role with "
+            "no answer fails the gate rather than passing it quietly."
+        )
 
     if report.misses:
         shown = report.misses[:MAX_MISS_ROWS]

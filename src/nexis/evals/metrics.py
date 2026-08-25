@@ -49,6 +49,10 @@ class CalibrationReport(BaseModel):
     hit_rate: float
     mean_band_distance: float
     by_role: list[RoleCalibration] = Field(default_factory=list)
+    # Roles the dataset labels but the run never scored, because every call failed
+    # or the run never reached them. They carry no hit rate, so they cannot appear
+    # in by_role, and a silent absence there would read as a pass.
+    unmeasured_roles: list[ReviewerRole] = Field(default_factory=list)
     misses: list[Miss] = Field(default_factory=list)
 
 
@@ -121,10 +125,15 @@ def calibration(
                 )
             )
 
+    labelled_roles = {role for _, role in bands}
+
     by_role: list[RoleCalibration] = []
+    unmeasured_roles: list[ReviewerRole] = []
     for role in ReviewerRole:
         distances = per_role_distance.get(role)
         if not distances:
+            if role in labelled_roles:
+                unmeasured_roles.append(role)
             continue
         scores = per_role_scores[role]
         by_role.append(
@@ -155,6 +164,7 @@ def calibration(
         if all_distances
         else 0.0,
         by_role=by_role,
+        unmeasured_roles=unmeasured_roles,
         misses=misses,
     )
 
@@ -215,6 +225,10 @@ def gate(report: CalibrationReport, min_hit_rate: float) -> list[str]:
 
     The gate reads the band and never an exact score, so a reviewer that answers
     within human tolerance passes even when no two runs agree on the number.
+
+    A role the dataset labels but the run never scored also fails. No answer is not
+    a pass: an outage that drops every call from one reviewer would otherwise leave
+    a green run carrying no opinion from it at all.
     """
     failures = [
         f"{role.role.value}: {role.hit_rate:.0%} of {role.labelled_scores} labelled "
@@ -222,6 +236,10 @@ def gate(report: CalibrationReport, min_hit_rate: float) -> list[str]:
         for role in report.by_role
         if role.hit_rate < min_hit_rate
     ]
-    if not report.by_role:
+    failures.extend(
+        f"{role.value}: no labelled score was collected, so the role was never checked"
+        for role in report.unmeasured_roles
+    )
+    if not report.by_role and not report.unmeasured_roles:
         failures.append("no labelled score was collected, so nothing was checked")
     return failures
