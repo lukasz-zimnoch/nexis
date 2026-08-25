@@ -50,9 +50,10 @@ class FakeReviewer:
 
     calls: list[tuple[str, str]] = []
 
-    def __init__(self, role, model_name, **_kwargs):
+    def __init__(self, role, model_name, temperature, **_kwargs):
         self.role = role
         self.model_name = model_name
+        self.temperature = temperature
         self.prompt_version = "fakever0001"
         self.score = 2
         self.raises: BaseException | None = None
@@ -193,6 +194,30 @@ class TestCollect:
         assert {record.repeat for record in records} == {1, 2, 3}
         assert {record.idea_id for record in records} == {"a", "b"}
         assert {record.role for record in records} == set(ReviewerRole)
+
+    async def test_every_reviewer_is_built_at_the_configured_temperature(
+        self, sample_config, tmp_path, factory
+    ):
+        """A model override changes the model, never the sampling policy."""
+        built: list[FakeReviewer] = []
+
+        def recording_factory(**kwargs):
+            agent = factory(**kwargs)
+            built.append(agent)
+            return agent
+
+        out = tmp_path / "run"
+        manifest = await collect(
+            [make_labelled("a")],
+            sample_config,
+            out,
+            model_override=CHEAP_MODEL,
+            reviewer_factory=recording_factory,
+        )
+        for agent in built:
+            expected = sample_config.temperature_for(f"reviewer_{agent.role.value}")
+            assert agent.temperature == expected
+            assert manifest.temperatures[agent.role.value] == expected
 
     async def test_the_manifest_lands_before_the_first_call(
         self, sample_config, tmp_path, factory

@@ -53,6 +53,7 @@ def mock_llm():
 def make_agent(mock_llm) -> BaseAgent:
     return BaseAgent(
         model_name="claude-sonnet-4-6",
+        temperature=0.0,
         output_schema=SimpleOutput,
         system_prompt="You are a test agent.",
         max_retries=2,
@@ -126,6 +127,7 @@ def test_format_input_with_pydantic_model():
     with patch("nexis.agents.base.ChatOpenAI"):
         agent = BaseAgent(
             model_name="test",
+            temperature=0.0,
             output_schema=SimpleOutput,
             system_prompt="test",
         )
@@ -143,7 +145,7 @@ def test_build_llm_uses_openrouter(monkeypatch):
     with patch("nexis.agents.base.ChatOpenAI") as mock:
         import nexis.agents.base as base
 
-        base.build_llm("anthropic/claude-opus-4-6")
+        base.build_llm("anthropic/claude-opus-4-6", 0.0)
     mock.assert_called_once()
     assert mock.call_args.kwargs["base_url"] == "https://openrouter.ai/api/v1"
     assert mock.call_args.kwargs["api_key"] == "sk-or-test"
@@ -191,11 +193,13 @@ async def test_prompt_version_reported_with_every_call(mock_llm, caplog):
 def test_prompt_version_follows_the_system_prompt(mock_llm):
     one = BaseAgent(
         model_name="claude-sonnet-4-6",
+        temperature=0.0,
         output_schema=SimpleOutput,
         system_prompt="You are a test agent.",
     )
     two = BaseAgent(
         model_name="claude-sonnet-4-6",
+        temperature=0.0,
         output_schema=SimpleOutput,
         system_prompt="You are a different test agent.",
     )
@@ -226,6 +230,7 @@ async def test_fallback_model_used_after_timeout(mock_llm):
 
         agent = BaseAgent(
             model_name="slow/model",
+            temperature=0.0,
             output_schema=SimpleOutput,
             system_prompt="test",
             max_retries=2,
@@ -240,6 +245,6 @@ async def test_fallback_model_used_after_timeout(mock_llm):
     assert result.answer == "OK"
     assert result.failure_reason is None
     # build_llm should have been called for the fallback
-    mock_build.assert_called_with("fast/fallback")
+    mock_build.assert_called_with("fast/fallback", 0.0)
     assert agent.model_name == "fast/fallback"
     assert agent._switched_to_fallback is True

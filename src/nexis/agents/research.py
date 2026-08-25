@@ -48,6 +48,7 @@ class ResearchAgent(BaseAgent):
     def __init__(
         self,
         model_name: str,
+        temperature: float | None,
         max_retries: int = 2,
         timeout: int = 120,
         fallback_model: str | None = None,
@@ -60,6 +61,7 @@ class ResearchAgent(BaseAgent):
                 "Generate structured business ideas based on the research prompt and "
                 "trend signals provided.\n\n" + UNTRUSTED_DATA_RULE
             ),
+            temperature=temperature,
             max_retries=max_retries,
             timeout=timeout,
             fallback_model=fallback_model,
@@ -99,6 +101,7 @@ class TrendScanner(BaseAgent):
     def __init__(
         self,
         model_name: str,
+        temperature: float | None,
         max_retries: int = 2,
         timeout: int = 120,
         fallback_model: str | None = None,
@@ -111,6 +114,7 @@ class TrendScanner(BaseAgent):
                 "extract meaningful trend signals relevant to the research domain.\n\n"
                 + UNTRUSTED_DATA_RULE
             ),
+            temperature=temperature,
             max_retries=max_retries,
             timeout=timeout,
             fallback_model=fallback_model,
@@ -147,6 +151,7 @@ class NicheValidator(BaseAgent):
     def __init__(
         self,
         model_name: str,
+        temperature: float | None,
         max_retries: int = 2,
         timeout: int = 120,
         fallback_model: str | None = None,
@@ -159,6 +164,7 @@ class NicheValidator(BaseAgent):
                 "duplicates and ideas with obvious large incumbents (Google, Amazon, Microsoft, "
                 "etc.) that would make it nearly impossible for a small team to compete."
             ),
+            temperature=temperature,
             max_retries=max_retries,
             timeout=timeout,
             fallback_model=fallback_model,

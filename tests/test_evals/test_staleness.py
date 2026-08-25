@@ -28,6 +28,14 @@ def current_models() -> dict[str, str]:
     }
 
 
+def current_temperatures() -> dict[str, float | None]:
+    config = current_config()
+    return {
+        role.value: config.temperature_for(f"reviewer_{role.value}")
+        for role in ReviewerRole
+    }
+
+
 def make_manifest(**overrides) -> RunManifest:
     fields = {
         "run_id": "eval-abc123",
@@ -35,6 +43,7 @@ def make_manifest(**overrides) -> RunManifest:
         "ideas": 1,
         "repeats": 1,
         "models": current_models(),
+        "temperatures": current_temperatures(),
         "price_table_date": "2026-08-14",
         "started_at": "2026-08-18T10:00:00+00:00",
         "projected_calls": 6,
@@ -80,6 +89,36 @@ class TestStalenessNotes:
         assert notes[0].startswith("risk:")
         assert "openai/gpt-5.6-luna" in notes[0]
         assert current_models()["risk"] in notes[0]
+
+    def test_a_changed_temperature_is_named(self):
+        records = [fresh_record(role) for role in ReviewerRole]
+        temperatures = current_temperatures()
+        temperatures["moat"] = 0.9
+        notes = staleness_notes(
+            make_manifest(temperatures=temperatures), records, current_config()
+        )
+        assert len(notes) == 1
+        assert notes[0].startswith("moat:")
+        assert "0.9" in notes[0]
+
+    def test_a_run_that_never_recorded_a_temperature_is_skipped(self):
+        """An older manifest cannot report a temperature, so it makes no claim."""
+        records = [fresh_record(role) for role in ReviewerRole]
+        assert (
+            staleness_notes(make_manifest(temperatures={}), records, current_config())
+            == []
+        )
+
+    def test_the_provider_default_is_named_in_words(self):
+        temperatures = current_temperatures()
+        temperatures["risk"] = None
+        notes = staleness_notes(
+            make_manifest(temperatures=temperatures),
+            [fresh_record(ReviewerRole.risk)],
+            current_config(),
+        )
+        assert len(notes) == 1
+        assert "the provider default" in notes[0]
 
     def test_a_role_with_no_records_is_skipped(self):
         """Nothing was collected for it, so nothing about it can be stale."""
