@@ -28,7 +28,7 @@ business matures, not on whether it holds any today. None of these businesses
 exists, so none of them holds a moat now, and a reviewer that scores the present
 state puts every idea near the floor.
 
-Four label rationales carry the distinctions the bands rely on, and a reviewer
+Five label rationales carry the distinctions the bands rely on, and a reviewer
 that misses any one of them will disagree with the labels in a readable way:
 
 - A regulatory barrier counts when this business must pay it to sell at all, and
@@ -38,6 +38,13 @@ that misses any one of them will disagree with the labels in a readable way:
 - Where an established competitor already holds the position, the moat is theirs.
 - Operational data that piles up from ordinary use is a moat even when it builds
   slowly and the software around it is dull.
+- Public source material does not cancel that accumulation. The question is
+  whether the assembled and maintained record can be bought off the shelf, not
+  whether the raw input is secret.
+
+The bands are deliberately not symmetric around the middle. Most of these ideas
+are commodity software, so the low bands carry more of the set than the high
+ones, and only one idea claims the top band.
 
 To change a label, edit the line and run `pytest tests/test_evals/test_dataset.py`.
 The guards there check that the file stays large enough, that every role keeps
