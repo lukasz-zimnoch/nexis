@@ -53,7 +53,7 @@ The pipeline consists of four layers: Deep Research (idea generation), Parallel 
 
 ### 2.2 High-Level Flow
 
-The system executes as a directed acyclic graph (DAG) with four sequential layers and one conditional retry edge:
+The system executes as a directed graph with four sequential layers and one conditional retry edge. The retry edge routes from the review layer back to the supervisor, so the graph holds a cycle and is not acyclic:
 
 1. **Layer 1 — Deep Research:** Research Agent + sub-agents scan the web, identify trends, and produce N candidate business ideas with structured metadata.
 2. **Layer 2 — Parallel Review Panel:** Each idea is evaluated in parallel by 6 specialist critic agents. A Synthesis node aggregates scores, ranks ideas, and filters the top K above a configurable threshold.
