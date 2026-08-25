@@ -5,7 +5,7 @@
 | **Status** | Accepted |
 | **Date** | 2026-04-10 |
 | **Deciders** | Łukasz Zimnoch |
-| **Supersedes** | Parts of [ADR-0011](0011-cloud-run-scale-to-zero-iam-auth.md) (synchronous execution model) |
+| **Supersedes** | Parts of [ADR-0011](0011-cloud-run-scale-to-zero-iam-auth.md) (synchronous execution model) and of [ADR-0001](0001-langgraph-orchestration-framework.md) (checkpointing and the production runtime) |
 
 ## Context
 
