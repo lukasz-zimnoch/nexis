@@ -175,8 +175,10 @@ report. See ADR-0008.
 
 ### 2.6 Parallelism
 
-Two mechanisms, because they solve different problems. `Send()` fans out graph
-nodes; `asyncio.gather()` fans out coroutines inside one node. See ADR-0003.
+Two mechanisms, because the pipeline fans out for two different reasons.
+`Send()` fans out graph nodes, and it handles a branch count that only Layer 1
+decides. `asyncio.gather()` fans out coroutines inside one node, and it handles
+a fixed set of calls that node needs before it continues. See ADR-0003.
 
 - **Layer 2** emits one `Send()` per idea and role, so eight ideas open 48
   concurrent reviewer calls. LangGraph counts the tasks and fans in at the

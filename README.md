@@ -103,11 +103,19 @@ sampling temperature, in one table each. The reviewers sit at 0.0 because they
 measure. The research agent sits at 1.0 because it invents. An agent with no
 temperature assigned fails to construct, so the two tables cannot drift apart.
 
-Parallelism comes in two forms, because the two problems differ. `Send()` fans
-out graph nodes, so Layer 2 opens one node per idea and per role: eight ideas
-start 48 reviewer calls at once. `asyncio.gather()` fans out coroutines inside
-a single node, which is how one idea gets its MVP plan and its GTM plan at the
-same time.
+Parallelism comes in two forms, because the pipeline fans out for two different
+reasons.
+
+The first reason is a branch count nobody knows in advance. Layer 1 decides how
+many ideas exist, so the graph cannot declare its own shape up front. `Send()`
+answers that: it dispatches one graph node per idea and per role, so eight
+ideas start 48 reviewer calls at once. Each branch writes its result back into
+shared state through a reducer, and LangGraph fans them in on its own.
+
+The second reason is a fixed set of calls that one step needs finished before
+it continues. `asyncio.gather()` answers that. The MVP Architect and the GTM
+Strategist run together inside a single node, because the composer needs both
+plans. One node also means two graph branches cannot write over each other.
 
 ### Failure is the normal case
 
