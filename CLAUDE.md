@@ -1,7 +1,7 @@
 # Nexis: instructions for AI agents
 
 Nexis is an autonomous multi-agent business idea pipeline built on LangGraph.
-Thirteen LLM agents run in four layers and produce a report without human
+Specialist LLM agents run in four layers and produce a report without human
 input.
 
 This file holds only what an agent needs to work on the repository. Everything
@@ -14,7 +14,7 @@ guessing.
 |---|---|---|
 | [`docs/specification.md`](docs/specification.md) | Single source of truth. Architecture, the four layers, data contracts, scoring, evals, trust boundary, models and temperature, configuration, observability, the service and job surface, the project tree. | Change behaviour, add an agent, or answer "how does X work" |
 | [`docs/deployment.md`](docs/deployment.md) | How to deploy on Cloud Run: prerequisites, the one-time setup steps, CI/CD, cost. | Touch deployment, secrets or GitHub Actions |
-| [`docs/adr/`](docs/adr/) | Nineteen Architecture Decision Records. Context, alternatives, trade-off. | Change a decision, or need the reason behind one |
+| [`docs/adr/`](docs/adr/) | Architecture Decision Records. Context, alternatives, trade-off. | Change a decision, or need the reason behind one |
 | [`docs/adr/README.md`](docs/adr/README.md) | The ADR index and the rules for writing one. | Add or edit an ADR |
 | `infrastructure/terraform/*.tf` | Every GCP resource. The definition, not a copy of it. | Change any deployed configuration |
 | `src/nexis/models.py` | The model per agent, with the evidence behind each choice. | Change which model an agent uses |

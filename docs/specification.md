@@ -1,7 +1,7 @@
 # Nexis: Technical Specification
 
 Nexis generates business ideas, scores them, and plans the ones that survive.
-Thirteen LLM agents run in four layers inside one LangGraph graph. A run needs
+Specialist LLM agents run in four layers inside one LangGraph graph. A run needs
 no human input between the prompt and the report.
 
 This document is the single source of truth for what the pipeline does and how
@@ -290,7 +290,7 @@ An idea below `score_threshold` (default 0.55) is dropped. The top `top_k`
 Both run from `src/nexis/evals`. See ADR-0018.
 
 **Calibration** asks whether a reviewer agrees with a human.
-`tests/evals/dataset.jsonl` holds 15 frozen `BusinessIdea` objects. Each one
+`tests/evals/dataset.jsonl` holds frozen `BusinessIdea` objects. Each one
 carries the score band that one or more roles are expected to land in, and the
 written reasoning behind the band. A score inside its band is correct, and the
 error is the distance to the nearest edge, which is zero inside. Each role must
@@ -526,8 +526,8 @@ of instructions, which is what makes a comparison between them mean anything.
 
 ### 9.3 Failure handling
 
-Thirteen agents and up to 48 concurrent reviewer calls mean some call fails in
-most runs. The pipeline answers that in six separate places.
+A run makes tens of model calls, many of them at the same time, so some call
+fails in most runs. The pipeline answers that in six separate places.
 
 | Failure | Response |
 |---|---|
@@ -577,8 +577,8 @@ With 8 candidates and 3 survivors:
 
 Retries add to this. A failed validation re-invokes the agent, and a Layer 2
 retry reruns Layers 1 and 2 for the new ideas. An eval run has a different
-shape: ideas × 6 roles × repeats, with Layer 1 never starting. The 15-idea
-dataset therefore costs 90 calls per repeat.
+shape: ideas × 6 roles × repeats, with Layer 1 never starting. A dataset of 15 ideas
+therefore costs 90 calls per repeat.
 
 This document does not price these calls. The price per call depends on the
 assigned model and its current OpenRouter rate, and both change without a

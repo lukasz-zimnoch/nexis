@@ -188,7 +188,8 @@ Hosting is free at this volume. Every component stays inside its free tier.
 | Artifact Registry | 0.5 GB storage | $0 |
 
 The LLM calls and the Tavily searches are the real cost, and neither depends on
-the hosting platform. A run makes roughly 65 LLM calls; see
+the hosting platform. The call count follows the pipeline
+shape and the run settings; see
 [specification §11](specification.md#11-call-volume-per-run). This repository
 does not print a dollar figure for that, because the price per call changes
 whenever a vendor changes it. Every run reports its own measured cost with the

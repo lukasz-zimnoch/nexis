@@ -5,7 +5,7 @@ planned business ideas. You give it a prompt. It searches the web for openings
 and invents candidates. It puts each candidate in front of a six-reviewer
 panel, plans the ones that survive, attacks those plans, and writes a report.
 
-Thirteen LLM agents do that work across four layers of a
+Specialist LLM agents do that work across four layers of a
 [LangGraph](https://langchain-ai.github.io/langgraph/) graph. A run needs no
 human input from the prompt to the report.
 
@@ -126,5 +126,5 @@ spend-capped, and never run on a pull request. See
 |---|---|
 | [`docs/specification.md`](docs/specification.md) | The single source of truth: what the pipeline does and how it is built. Architecture, data contracts, scoring, configuration, observability. |
 | [`docs/deployment.md`](docs/deployment.md) | How to deploy the system on Google Cloud Run with Terraform. |
-| [`docs/adr/`](docs/adr/) | Nineteen Architecture Decision Records. Each states the context, the alternatives and the trade-off accepted. Append-only. |
+| [`docs/adr/`](docs/adr/) | Architecture Decision Records. Each states the context, the alternatives and the trade-off accepted. Append-only. |
 | [`CLAUDE.md`](CLAUDE.md) | Working instructions for AI agents on this codebase. |
