@@ -5,6 +5,7 @@
 | **Status** | Accepted |
 | **Date** | 2026-03-29 |
 | **Deciders** | Łukasz Zimnoch |
+| **Partly superseded by** | [ADR-0013](0013-cloud-run-jobs-async-pipeline.md) (checkpointing and the production runtime) |
 
 ## Context
 

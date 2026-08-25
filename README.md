@@ -5,7 +5,7 @@ planned business ideas. You give it a prompt. It searches the web for openings
 and invents candidates. It puts each candidate in front of a six-reviewer
 panel, plans the ones that survive, attacks those plans, and writes a report.
 
-Thirteen LLM agents do that work across four layers of a
+Specialist LLM agents do that work across four layers of a
 [LangGraph](https://langchain-ai.github.io/langgraph/) graph. A run needs no
 human input from the prompt to the report.
 
@@ -87,38 +87,68 @@ The UI submits the job, then polls until it ends.
 
 ## How it is built
 
-Six choices that shape the code more than the rest:
+One Python package, three entry points: a CLI, a FastAPI service, and a batch
+job. The CLI and the batch job each build the LangGraph graph and invoke it.
+The service does not. It starts the batch job and returns.
 
-- **Two kinds of parallelism.** `Send()` fans out graph nodes and
-  `asyncio.gather()` fans out coroutines inside one node. Eight ideas open 48
-  concurrent reviewer calls. See [ADR-0003](docs/adr/0003-hybrid-parallelism-send-and-gather.md).
-- **Failure is the normal case.** An agent retries on its own bad output and is
-  told what was wrong. A timeout moves it to a fallback model. A spent retry
-  budget returns a partial result with `failure_reason` set, never an
-  exception. See [ADR-0007](docs/adr/0007-graceful-degradation-failure-reason.md).
-- **The ranking runs no LLM.** The synthesizer is arithmetic over the reviewer
-  scores, so one set of reviews always gives one ranking. A regression test
-  freezes the formula. See [ADR-0010](docs/adr/0010-deterministic-weighted-scoring.md).
-- **One model and one temperature per agent.** Both tables live in one file
-  each, and an agent with no temperature fails to construct. Reviewers sit at
-  0.0 because they measure; the research agent sits at 1.0 because it invents.
-  See [ADR-0005](docs/adr/0005-per-agent-model-specialization.md) and
-  [ADR-0019](docs/adr/0019-per-agent-sampling-policy.md).
-- **Every call lands in a run total.** Tokens, cost and time, split by layer and
-  by agent, stored with the job and rendered next to the report. See
-  [ADR-0017](docs/adr/0017-per-run-cost-and-token-metrics.md).
-- **Web text is untrusted data.** Anyone who can publish a page can otherwise
-  write into a prompt. Web text is cleaned, capped and wrapped in markers it
-  cannot forge, under a rule the agent's system prompt carries. See
-  [ADR-0016](docs/adr/0016-untrusted-web-content-trust-boundary.md).
+```mermaid
+flowchart LR
+    U([user]) --> SPA["React SPA"]
+    SPA <-->|"ID token"| API["FastAPI service"]
+    API <-->|"job document"| FS[("Firestore")]
+    API -->|"starts"| JOB["Batch job"]
+    JOB --> PIPE["LangGraph pipeline"]
+    PIPE -->|"every model call"| OR[["OpenRouter"]]
+    PIPE -->|"search and trends"| TAV[["Tavily"]]
+    JOB -->|"report and run cost"| FS
+```
 
-The review panel is the one part whose output no type can check, so it gets
-measured against a hand-labelled dataset. Each label is a score **band**, not a
-number. Two people who agree that an idea is commoditised still disagree on
-whether that is a 2 or a 3. The evals call real models, so they are manual,
-spend-capped, and never run on a pull request. See
-[specification §5](docs/specification.md#5-reviewer-evals) and
-[ADR-0018](docs/adr/0018-band-gated-reviewer-evals.md).
+| Component | Built with | Does |
+|---|---|---|
+| **React SPA** | React 18, Vite, TypeScript | Signs the user in, submits a job, polls it, renders the report and the cost panel |
+| **FastAPI service** | FastAPI, Firebase Auth | Checks the ID token on every `/api` route, records the job, starts the batch job, serves the built SPA |
+| **Firestore** | Firestore, native mode | One document per job: the config, the status, the report, the run cost |
+| **Batch job** | Cloud Run Job | Runs one pipeline to the end, then writes the report and the cost back to the job document |
+| **LangGraph pipeline** | LangGraph `StateGraph` | The four layer subgraphs of agents, and the nodes that retry or force-pass between them |
+| **OpenRouter** | OpenRouter API | One key and one base URL in front of every model vendor |
+| **Tavily** | Tavily API | The web search and the trend scan that Layer 1 reads |
+
+A run never blocks a request. The service writes the job document before it
+starts the batch job, and the SPA polls that document until the job ends.
+
+Terraform declares every resource above. GitHub Actions builds the image and
+deploys it through Workload Identity Federation, with no long-lived key.
+
+Engineering notes:
+
+- **Agents exchange objects, not text.** Each agent takes a Pydantic model and
+  returns one, and the model schema is bound to the LLM call. An answer that
+  does not fit the schema fails validation before any code reads it. The agent
+  then retries with that validation error added to the conversation.
+- **A failed agent returns a result, not an exception.** When its retries run
+  out, it returns a valid object with `failure_reason` set. A review that
+  failed is left out of the average, and the run carries on.
+- **The number of parallel branches is decided at run time.** Layer 1 chooses
+  how many ideas exist, so Layer 2 opens one branch per idea and per reviewer.
+  Each state field declares how to merge those branches back.
+- **The ranking is arithmetic, not a model call.** A weighted average of the
+  review scores gives the same ranking for the same reviews every time. A test
+  pins the formula to stored values.
+- **The review panel is measured against human labels.** A frozen dataset
+  gives each idea a score band per reviewer role. A band, not a number: two
+  readers who agree that an idea is commoditised still split on a 2 or a 3.
+  Calibration counts how often a role lands inside its band, and the gate
+  fails below a minimum share. Variance reruns the same ideas and reports the
+  spread of one role across repeats. Both call real models, so they run by
+  hand under a spend cap.
+- **Web text reaches a prompt as data, never as instruction.** Search results
+  lose their control characters, get cut to a fixed length, and sit inside
+  markers that a page cannot fake.
+- **Each run reports its own cost.** The run stores tokens, dollars and
+  latency, split by layer and by agent, and the UI shows them next to the
+  report.
+- **The test suite calls no model.** It runs in CI with no API key, so a pull
+  request costs nothing to check.
 
 ## Documentation
 
@@ -126,5 +156,5 @@ spend-capped, and never run on a pull request. See
 |---|---|
 | [`docs/specification.md`](docs/specification.md) | The single source of truth: what the pipeline does and how it is built. Architecture, data contracts, scoring, configuration, observability. |
 | [`docs/deployment.md`](docs/deployment.md) | How to deploy the system on Google Cloud Run with Terraform. |
-| [`docs/adr/`](docs/adr/) | Nineteen Architecture Decision Records. Each states the context, the alternatives and the trade-off accepted. Append-only. |
+| [`docs/adr/`](docs/adr/) | Architecture Decision Records. Each states the context, the alternatives and the trade-off accepted. Append-only. |
 | [`CLAUDE.md`](CLAUDE.md) | Working instructions for AI agents on this codebase. |

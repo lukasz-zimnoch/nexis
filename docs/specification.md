@@ -1,7 +1,7 @@
 # Nexis: Technical Specification
 
 Nexis generates business ideas, scores them, and plans the ones that survive.
-Thirteen LLM agents run in four layers inside one LangGraph graph. A run needs
+Specialist LLM agents run in four layers inside one LangGraph graph. A run needs
 no human input between the prompt and the report.
 
 This document is the single source of truth for what the pipeline does and how
@@ -175,8 +175,10 @@ report. See ADR-0008.
 
 ### 2.6 Parallelism
 
-Two mechanisms, because they solve different problems. `Send()` fans out graph
-nodes; `asyncio.gather()` fans out coroutines inside one node. See ADR-0003.
+Two mechanisms, because the pipeline fans out for two different reasons.
+`Send()` fans out graph nodes, and it handles a branch count that only Layer 1
+decides. `asyncio.gather()` fans out coroutines inside one node, and it handles
+a fixed set of calls that node needs before it continues. See ADR-0003.
 
 - **Layer 2** emits one `Send()` per idea and role, so eight ideas open 48
   concurrent reviewer calls. LangGraph counts the tasks and fans in at the
@@ -290,7 +292,7 @@ An idea below `score_threshold` (default 0.55) is dropped. The top `top_k`
 Both run from `src/nexis/evals`. See ADR-0018.
 
 **Calibration** asks whether a reviewer agrees with a human.
-`tests/evals/dataset.jsonl` holds 15 frozen `BusinessIdea` objects. Each one
+`tests/evals/dataset.jsonl` holds frozen `BusinessIdea` objects. Each one
 carries the score band that one or more roles are expected to land in, and the
 written reasoning behind the band. A score inside its band is correct, and the
 error is the distance to the nearest edge, which is zero inside. Each role must
@@ -526,8 +528,8 @@ of instructions, which is what makes a comparison between them mean anything.
 
 ### 9.3 Failure handling
 
-Thirteen agents and up to 48 concurrent reviewer calls mean some call fails in
-most runs. The pipeline answers that in six separate places.
+A run makes tens of model calls, many of them at the same time, so some call
+fails in most runs. The pipeline answers that in six separate places.
 
 | Failure | Response |
 |---|---|
@@ -554,9 +556,11 @@ ADR-0013, ADR-0014 and ADR-0015.
 | **Cloud Run Job** | `job_runner.py` | Runs as `python -m nexis.job_runner`. Reads `JOB_ID` and the overrides, builds the graph, invokes it, and writes the reports or an error. It writes the run metrics either way and uses `JOB_ID` as the run ID |
 | **React SPA** | `frontend/` | Login, dashboard and job detail. Fetches `/config.json` at startup, authenticates against Firebase, polls `/api/jobs*` while a job is `pending` or `running`, and renders the report and the cost panel |
 
-**Checkpointer.** Every path (CLI, Service, Job) uses `MemorySaver`. State
-lives in memory for one run and does not survive it. That fits an execution
-model where each job runs to completion in its own container.
+**Checkpointer.** The CLI and the Job build the graph with `InMemorySaver`.
+State lives in memory for one run and does not survive it. That fits an
+execution model where each job runs to completion in its own container. The
+Service builds a graph with no checkpointer at import, and never invokes it.
+That object exists so `langgraph dev` can export the graph.
 
 ---
 
@@ -577,8 +581,8 @@ With 8 candidates and 3 survivors:
 
 Retries add to this. A failed validation re-invokes the agent, and a Layer 2
 retry reruns Layers 1 and 2 for the new ideas. An eval run has a different
-shape: ideas × 6 roles × repeats, with Layer 1 never starting. The 15-idea
-dataset therefore costs 90 calls per repeat.
+shape: ideas × 6 roles × repeats, with Layer 1 never starting. A dataset of 15 ideas
+therefore costs 90 calls per repeat.
 
 This document does not price these calls. The price per call depends on the
 assigned model and its current OpenRouter rate, and both change without a
@@ -596,7 +600,7 @@ separately and is not in that total.
 | LLM gateway | OpenRouter, `openrouter.ai/api/v1` |
 | Structured output | LangChain `with_structured_output()` with Pydantic v2 |
 | Web search | Tavily Search API |
-| Checkpointer | MemorySaver, in memory, one run |
+| Checkpointer | InMemorySaver, in memory, one run |
 | Tracing | `nexis.telemetry` JSON logs; LangSmith when enabled |
 | Runtime | Python 3.11+, asyncio |
 | Packages | uv |
