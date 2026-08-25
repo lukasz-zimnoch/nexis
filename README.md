@@ -87,30 +87,60 @@ The UI submits the job, then polls until it ends.
 
 ## How it is built
 
-The model call is the easy part of an agent system. That call can return the
-wrong shape, time out, or disagree with the last one. It can also cost real
-money and carry text a stranger wrote on a web page. Most of the code here
-answers one of those.
+One Python package, three entry points. `nexis.__main__` is the CLI,
+`nexis.server` is the FastAPI app, and `nexis.job_runner` is the batch job.
+All three build the same graph and invoke it.
 
-**A model returns text, not a type.** Every agent takes a Pydantic model and
-returns one, and `with_structured_output()` binds that schema to the call. The
-bounds live in the type rather than in the prompt, so a `Review` with a score
-of 11 fails before any code reads it. A rejected answer is not retried blind.
-The agent appends the validation error to its own message list and asks again:
+### Stack
 
-```python
-messages.append(HumanMessage(
-    content=f"The previous response failed validation: {last_error}\nPlease fix and retry."
-))
-```
+| Concern | Choice |
+|---|---|
+| Orchestration | LangGraph `StateGraph`, one compiled subgraph per layer |
+| Model access | OpenRouter, one key and one base URL for every vendor |
+| Structured output | LangChain `with_structured_output()` over Pydantic v2 models |
+| Web search | Tavily |
+| API | FastAPI, which also serves the built SPA |
+| UI | React 18, Vite 5, TypeScript |
+| Auth | Firebase Auth, Admin SDK server side, Web SDK in the browser |
+| Job state | Firestore, native mode |
+| Hosting | Cloud Run Service for the API and SPA, Cloud Run Job for a run |
+| Infrastructure | Terraform, state in GCS |
+| Packages | uv, Python 3.11+ |
 
-The second attempt answers the specific complaint, not the same prompt twice.
+### Source map
 
-**The pipeline does not know its own width until it runs.** Layer 1 decides how
-many ideas exist, so the graph cannot declare its shape when it compiles. Layer
-2 emits one `Send()` per idea and per role, which turns eight ideas into 48
-reviewer nodes in one step. Those branches write to the same state at the same
-time and never collide, because each field declares how to merge:
+| Path | Holds |
+|---|---|
+| `graph.py` | The parent graph, the supervisor, and the retry and force-pass nodes |
+| `layers/` | One module per layer, each with a `build_*_subgraph()` |
+| `agents/` | `BaseAgent` plus the agent classes, grouped by role |
+| `state.py` | Every Pydantic contract and `PipelineState` |
+| `models.py`, `sampling.py` | The model and the temperature per agent |
+| `pricing.py`, `metrics.py`, `telemetry.py` | The price table, the run totals, the JSON events |
+| `untrusted.py` | The only route web text takes into a prompt |
+| `tools/` | Tavily search and the trend scraper |
+| `evals/` | Reviewer calibration and variance, run by hand |
+| `templates/` | Jinja2 templates for the report |
+| `server.py`, `auth.py`, `firestore.py`, `job_trigger.py`, `job_runner.py` | The web surface and the batch job |
+| `frontend/` | The React SPA |
+
+### The graph
+
+`build_graph()` in `graph.py` compiles seven nodes into one `StateGraph`:
+
+| Node | Type | Does |
+|---|---|---|
+| `supervisor` | function | Sets the research prompt, refreshes it on a retry |
+| `research`, `review`, `planning`, `output` | subgraph | The four layers, each compiled by its own module in `layers/` |
+| `increment_iteration` | function | Bumps the retry counter on the way back to the supervisor |
+| `force_pass` | function | Picks the best ideas when the retries run out |
+
+The edges are linear except after `review`, where the conditional edge
+`should_retry` reads `top_ideas` and `iteration` and returns one of three
+routes: `planning`, `retry` or `force_pass`.
+
+State is a `TypedDict`. Each field that parallel branches write to declares its
+own reducer, so the branches never overwrite each other:
 
 ```python
 class PipelineState(TypedDict):
@@ -119,69 +149,87 @@ class PipelineState(TypedDict):
     scores: Annotated[dict[str, float], merge_dicts]
 ```
 
-`asyncio.gather()` covers the other case, a fixed set of calls that one node
-needs before it continues. The MVP Architect and the GTM Strategist run
-together inside a single node, because the composer needs both plans.
+Fan-out uses two mechanisms. Layer 2 emits one `Send()` per idea and per role,
+and Layer 3 emits one per idea that passed. The branch count is therefore a
+run-time value. Inside a single node, `asyncio.gather()` runs a fixed set of
+calls: the MVP Architect and the GTM Strategist, whose results the composer
+both needs.
 
-**A call fails more often than you would like.** No model failure raises. An
-agent that times out rebuilds its client on a fallback model. It spends the
-tries it has left there, at the same temperature, so a degraded run does not
-also become a differently calibrated one. An agent that runs out of tries
-returns a valid instance with `failure_reason` set, and every consumer reads
-that field before the result. A failed reviewer drops out of the weighted
-average, and its idea keeps the scores that did arrive. The same rule holds one
-level up: when no idea clears the threshold, the graph retries research with
-the titles it already saw excluded, then force-passes the best of what it has.
-A run always ends in a report.
+### An agent
 
-**A judgement drifts, and nobody notices.** The ranking never asks a model. It
-is a weighted average over the reviewer scores:
+Every agent subclasses `BaseAgent`, which owns the call:
+
+1. `build_llm(model, temperature)` returns a `ChatOpenAI` client aimed at
+   OpenRouter. Neither argument has a default. `models.py` and `sampling.py`
+   hold the value per agent.
+2. `with_structured_output(Model)` binds the Pydantic schema to the call, so
+   the answer arrives as a validated object or not at all.
+3. The call runs under `asyncio.wait_for`, up to `max_retries + 1` attempts.
+   Before a retry, the agent appends the validation error to its own message
+   list, so the next attempt reads the specific complaint.
+4. A timeout rebuilds the client on `fallback_model` at the same temperature.
+5. Exhausted attempts return a minimal valid instance with `failure_reason`
+   set. `BaseAgent` never raises at a caller.
+
+Every call also records tokens, cost and latency into the `RunMetrics` held in
+a context variable for the run.
+
+### Scoring
+
+`ReviewSynthesizer` in `agents/reviewers.py` calls no model. For each idea it
+computes a weighted average over that idea's reviews:
 
 ```
 score = Σ (weight × score × confidence) / 10
 ```
 
-A regression test freezes that formula against a stored panel, so one set of
-reviews always gives one ranking. Temperature is a per-agent policy for the
-same reason. The reviewers sit at 0.0 because they measure, and the research
-agent sits at 1.0 because it invents. An agent whose author picked no
-temperature fails to construct.
+It drops every idea below `score_threshold` and passes the top `top_k` to
+Layer 3. A review with `failure_reason` set is left out of its idea's average.
+`tests/test_scoring_regression.py` freezes the formula against a stored panel.
 
-The reviewers are the part no type can check, so they are measured against a
-hand-labelled dataset. Each label is a score band, never a number. Two people
-who agree that an idea is commoditised still disagree on whether that is a 2 or
-a 3. Calibration measures a reviewer against the human label. Variance measures
-the same reviewer against its own repeats. Both call real models, so both stay
-manual, spend-capped and off the pull request path.
+### Web text in prompts
 
-**A web page can talk to your model.** Text a tool fetched is untrusted data.
-Text an agent produced is pipeline data. That is the boundary, and web text
-crosses it through one module. The text loses every control character and every
-copy of the marker strings. That module then cuts it to a fixed length and
-wraps it in markers it can no longer forge. The agent's system prompt carries a
-rule that names both markers. It states that the text between them is data to
-read, never instructions to follow. The rule raises the cost of an injection.
-It does not prove the model obeys, and the specification says so.
+`untrusted.py` is the only route from a tool result into a prompt. It exports
+two functions and one rule:
 
-**Every run accounts for itself.** Tokens, cost and wall time land in one total
-per run, split by layer and by agent. The job stores that total, and the UI
-renders it beside the report. Cost comes from a dated price table. A model the
-table does not list is named in the output, never counted as free. Each
-agent's system prompt is hashed, and the digest travels with the run, so two
-runs compare only when they ran the same instructions.
+- `sanitize_untrusted()` strips control characters and every copy of the two
+  marker strings, then cuts the text to `MAX_UNTRUSTED_CHARS`.
+- `wrap_untrusted()` puts the result between `BEGIN_MARKER` and `END_MARKER`.
+- `UNTRUSTED_DATA_RULE` goes on the system prompt of any agent that reads web
+  text. It names both markers and states that what sits between them is data.
 
-**And it ships.** Terraform declares every GCP resource. A push to `master`
-builds the image, and GitHub Actions deploys it through Workload Identity
-Federation with no long-lived key. The API and the SPA share one Cloud Run
-Service that scales to zero. The pipeline runs beside it as a Cloud Run Job
-that writes to Firestore, because a ten-minute run does not belong inside an
-HTTP request. Nothing under `tests/` calls a real model, so the whole suite
-runs in CI with no API key and no spend.
+### The web surface
 
-Every choice above has an Architecture Decision Record in
-[`docs/adr/`](docs/adr/), with the alternatives that lost and the trade-off
-accepted. [`docs/specification.md`](docs/specification.md) holds the full
-detail.
+`POST /api/jobs` writes a Firestore document and starts a Cloud Run Job
+execution, with the config as environment overrides. It does not wait for the
+run. The job runner builds the graph, invokes it, and writes the reports and
+the run metrics back to the same document. The SPA polls `GET /api/jobs/{id}`
+while the status is `pending` or `running`.
+
+Every `/api/*` route needs a Firebase ID token, which `auth.py` verifies with
+the Admin SDK. `/health` and `/config.json` do not.
+
+### Deployment
+
+Terraform declares every GCP resource, and keeps its state in a GCS bucket. CI
+builds the image and pushes it to GHCR. The deploy workflow authenticates
+through Workload Identity Federation, with no long-lived key, and points the
+Service and the Job at the new image. It changes nothing else: every other
+field belongs to Terraform.
+
+The Service scales to zero when idle. The pipeline runs in the Job instead of
+the Service, because a run takes minutes and an HTTP request should not.
+
+### Tests
+
+`tests/` mirrors the package. `test_agents/`, `test_layers/` and `test_tools/`
+hold the unit tests. `test_evals/` drives the eval harness against a stand-in
+reviewer, and one module per top-level file covers the rest. No test calls a
+real model, so the suite runs in CI with no API key.
+
+The reviewer evals are the exception. They live behind
+`python -m nexis.evals`, call the real panel, and run by hand under a spend cap
+that the collector checks before the first call.
 
 ## Documentation
 
