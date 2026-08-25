@@ -556,9 +556,11 @@ ADR-0013, ADR-0014 and ADR-0015.
 | **Cloud Run Job** | `job_runner.py` | Runs as `python -m nexis.job_runner`. Reads `JOB_ID` and the overrides, builds the graph, invokes it, and writes the reports or an error. It writes the run metrics either way and uses `JOB_ID` as the run ID |
 | **React SPA** | `frontend/` | Login, dashboard and job detail. Fetches `/config.json` at startup, authenticates against Firebase, polls `/api/jobs*` while a job is `pending` or `running`, and renders the report and the cost panel |
 
-**Checkpointer.** Every path (CLI, Service, Job) uses `MemorySaver`. State
-lives in memory for one run and does not survive it. That fits an execution
-model where each job runs to completion in its own container.
+**Checkpointer.** The CLI and the Job build the graph with `InMemorySaver`.
+State lives in memory for one run and does not survive it. That fits an
+execution model where each job runs to completion in its own container. The
+Service builds a graph with no checkpointer at import, and never invokes it.
+That object exists so `langgraph dev` can export the graph.
 
 ---
 
@@ -598,7 +600,7 @@ separately and is not in that total.
 | LLM gateway | OpenRouter, `openrouter.ai/api/v1` |
 | Structured output | LangChain `with_structured_output()` with Pydantic v2 |
 | Web search | Tavily Search API |
-| Checkpointer | MemorySaver, in memory, one run |
+| Checkpointer | InMemorySaver, in memory, one run |
 | Tracing | `nexis.telemetry` JSON logs; LangSmith when enabled |
 | Runtime | Python 3.11+, asyncio |
 | Packages | uv |

@@ -87,15 +87,16 @@ The UI submits the job, then polls until it ends.
 
 ## How it is built
 
-One Python package with three entry points: a CLI, a FastAPI service, and a
-batch job. All three build the same LangGraph graph and invoke it.
+One Python package, three entry points: a CLI, a FastAPI service, and a batch
+job. The CLI and the batch job each build the LangGraph graph and invoke it.
+The service does not. It starts the batch job and returns.
 
 ```mermaid
 flowchart LR
     U([user]) --> SPA["React SPA"]
     SPA <-->|"ID token"| API["FastAPI service<br/>Cloud Run"]
     API <-->|"job document"| FS[("Firestore")]
-    API -->|"starts"| JOB["Pipeline job<br/>Cloud Run Job"]
+    API -->|"starts"| JOB["Batch job<br/>Cloud Run Job"]
     JOB --> G["LangGraph pipeline<br/>four layers of agents"]
     G -->|"OpenRouter"| LLM[["LLM providers"]]
     G -->|"Tavily"| WEB[["web search"]]
@@ -109,13 +110,12 @@ flowchart LR
 | **Tools** | Tavily, HTTP scrapers | Web search and trend signals. Every fetched string passes one sanitizer before it reaches a prompt |
 | **Scoring** | plain Python | A weighted average over the reviews. No model call, and a regression test freezes the formula |
 | **API service** | FastAPI, Firebase Auth | Job endpoints behind an ID token. Also serves the built SPA |
-| **Job runner** | Cloud Run Job | Runs one pipeline to the end and writes the report and the run cost to Firestore |
+| **Batch job** | Cloud Run Job | Runs one pipeline to the end and writes the report and the run cost to Firestore |
 | **Web UI** | React 18, Vite, TypeScript | Submits a job, polls it, renders the report and the cost panel |
 | **Infrastructure** | Terraform, Cloud Run, Firestore | Every resource declared in code. GitHub Actions deploys the image through Workload Identity Federation |
 
-A run never blocks a request. The service writes a job document, starts the
-Cloud Run Job, and returns. The job invokes the graph and writes the result
-back to the same document, which the SPA polls.
+A run never blocks a request. The service writes a job document before it
+starts the job, and the SPA polls that document until the job ends.
 
 What holds the pipeline together:
 
