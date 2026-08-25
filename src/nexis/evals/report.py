@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 from nexis.evals.metrics import CalibrationReport, VarianceReport
-from nexis.evals.runner import RunManifest
+from nexis.evals.runner import (
+    ASSUMED_INPUT_TOKENS,
+    ASSUMED_OUTPUT_TOKENS,
+    RunManifest,
+)
 
 # Long lists of near-identical rows bury the interesting ones.
 MAX_MISS_ROWS = 20
@@ -39,20 +43,39 @@ def render_run(manifest: RunManifest) -> list[str]:
         if manifest.measured_cost_usd is not None
         else "n/a"
     )
-    lines.extend(
-        _table(
-            ["", "Projected", "Measured"],
+    rows = [
+        ["Calls", str(manifest.projected_calls), measured_calls],
+        ["USD", f"{manifest.projected_cost_usd:.4f}", measured_usd],
+    ]
+    # Per call, so the numbers can be read straight into ASSUMED_INPUT_TOKENS and
+    # ASSUMED_OUTPUT_TOKENS without arithmetic.
+    if manifest.measured_calls:
+        rows.append(
             [
-                ["Calls", str(manifest.projected_calls), measured_calls],
-                ["USD", f"{manifest.projected_cost_usd:.4f}", measured_usd],
-            ],
+                "Input tokens per call",
+                str(ASSUMED_INPUT_TOKENS),
+                str(round(manifest.measured_input_tokens / manifest.measured_calls))
+                if manifest.measured_input_tokens is not None
+                else "n/a",
+            ]
         )
-    )
+        rows.append(
+            [
+                "Output tokens per call",
+                str(ASSUMED_OUTPUT_TOKENS),
+                str(round(manifest.measured_output_tokens / manifest.measured_calls))
+                if manifest.measured_output_tokens is not None
+                else "n/a",
+            ]
+        )
+    lines.extend(_table(["", "Projected", "Measured"], rows))
     lines.append("")
     lines.append(
         "The projection assumes a fixed token split per call. The measured column "
         "comes from the token counts the provider returned, so a gap between the "
-        "two columns is the assumption being wrong, not the price."
+        "two columns is the assumption being wrong, not the price. Set the two "
+        "constants in `nexis/evals/runner.py` from the measured rows when they "
+        "drift, because the spend guard refuses a run on the projection alone."
     )
 
     lines.extend(["", "### Panel", ""])

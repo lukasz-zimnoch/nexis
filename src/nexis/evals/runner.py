@@ -30,11 +30,15 @@ from nexis.telemetry import run_context
 
 logger = logging.getLogger(__name__)
 
-# Assumed size of one reviewer call: the system prompt and the idea card in, one
-# Review out. Only the spend guard uses these. The manifest also stores what the
-# run really cost, so a finished run corrects the guess for the next one.
-ASSUMED_INPUT_TOKENS = 700
-ASSUMED_OUTPUT_TOKENS = 350
+# Assumed size of one reviewer call. Only the spend guard reads these. Both come
+# from a measured run rather than from counting the prompts, because the output
+# figure is about twice the JSON the reviewer returns: a reasoning model bills
+# thinking tokens that never reach the answer, and output costs five times input.
+# Sizing this from visible text alone put the guard at half the real spend. The
+# manifest records the tokens a finished run really used, so the next run can
+# correct these without a token count by hand.
+ASSUMED_INPUT_TOKENS = 550
+ASSUMED_OUTPUT_TOKENS = 900
 
 MANIFEST_NAME = "manifest.json"
 REVIEWS_NAME = "reviews.jsonl"
@@ -82,6 +86,11 @@ class RunManifest(BaseModel):
     projected_cost_usd: float
     measured_calls: int | None = None
     measured_cost_usd: float | None = None
+    # What the run really sent and received. These are what ASSUMED_INPUT_TOKENS
+    # and ASSUMED_OUTPUT_TOKENS should be set from. None when the run predates
+    # these fields.
+    measured_input_tokens: int | None = None
+    measured_output_tokens: int | None = None
     wall_seconds: float | None = None
     completed_at: str | None = None
 
@@ -256,6 +265,8 @@ async def collect(
 
     manifest.measured_calls = metrics.totals.calls
     manifest.measured_cost_usd = round(metrics.totals.cost_usd, 6)
+    manifest.measured_input_tokens = metrics.totals.input_tokens
+    manifest.measured_output_tokens = metrics.totals.output_tokens
     manifest.wall_seconds = metrics.wall_seconds
     manifest.completed_at = datetime.now(timezone.utc).isoformat()
     _write_manifest(out_dir, manifest)

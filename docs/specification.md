@@ -406,7 +406,7 @@ A label is a band and never a single value. A human can say that an obviously co
 
 **An eval never runs Layer 1.** The ideas are frozen, which holds every variable except the reviewer and keeps the search API out of the loop.
 
-**Spending is capped in code.** The collector projects the cost from the price table (§8.3) and refuses to start above a limit passed on the command line. A model with no price stops the projection instead of counting as free. The manifest stores the projected and the measured cost side by side.
+**Spending is capped in code.** The collector projects the cost from the price table (§8.3) and refuses to start above a limit passed on the command line. A model with no price stops the projection instead of counting as free. The manifest stores the projected and the measured cost side by side, and the tokens the run really used, so the assumption behind the projection is corrected from a measurement and not from reading the prompts. A reasoning model bills thinking tokens that never reach the answer, so a projection sized from visible text alone under-protects.
 
 The workflow that runs the evals in CI is manual and never fires on a push or a pull request. The formula in §6.2 needs no LLM, and is frozen separately in a regression test that runs in the ordinary CI job.
 
