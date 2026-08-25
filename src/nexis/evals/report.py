@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 from nexis.evals.metrics import CalibrationReport, VarianceReport
-from nexis.evals.runner import RunManifest
+from nexis.evals.runner import (
+    ASSUMED_INPUT_TOKENS,
+    ASSUMED_OUTPUT_TOKENS,
+    RunManifest,
+)
 
 # Long lists of near-identical rows bury the interesting ones.
 MAX_MISS_ROWS = 20
@@ -39,20 +43,39 @@ def render_run(manifest: RunManifest) -> list[str]:
         if manifest.measured_cost_usd is not None
         else "n/a"
     )
-    lines.extend(
-        _table(
-            ["", "Projected", "Measured"],
+    rows = [
+        ["Calls", str(manifest.projected_calls), measured_calls],
+        ["USD", f"{manifest.projected_cost_usd:.4f}", measured_usd],
+    ]
+    # Per call, so the numbers can be read straight into ASSUMED_INPUT_TOKENS and
+    # ASSUMED_OUTPUT_TOKENS without arithmetic.
+    if manifest.measured_calls:
+        rows.append(
             [
-                ["Calls", str(manifest.projected_calls), measured_calls],
-                ["USD", f"{manifest.projected_cost_usd:.4f}", measured_usd],
-            ],
+                "Input tokens per call",
+                str(ASSUMED_INPUT_TOKENS),
+                str(round(manifest.measured_input_tokens / manifest.measured_calls))
+                if manifest.measured_input_tokens is not None
+                else "n/a",
+            ]
         )
-    )
+        rows.append(
+            [
+                "Output tokens per call",
+                str(ASSUMED_OUTPUT_TOKENS),
+                str(round(manifest.measured_output_tokens / manifest.measured_calls))
+                if manifest.measured_output_tokens is not None
+                else "n/a",
+            ]
+        )
+    lines.extend(_table(["", "Projected", "Measured"], rows))
     lines.append("")
     lines.append(
         "The projection assumes a fixed token split per call. The measured column "
         "comes from the token counts the provider returned, so a gap between the "
-        "two columns is the assumption being wrong, not the price."
+        "two columns is the assumption being wrong, not the price. Set the two "
+        "constants in `nexis/evals/runner.py` from the measured rows when they "
+        "drift, because the spend guard refuses a run on the projection alone."
     )
 
     lines.extend(["", "### Panel", ""])
@@ -89,6 +112,24 @@ def render_calibration(report: CalibrationReport, min_hit_rate: float) -> list[s
             f"{report.failed} of {report.scored + report.failed} calls returned no "
             "score and were dropped rather than counted as a low score."
         )
+    rows = [
+        [
+            role.role.value,
+            str(role.labelled_scores),
+            str(role.in_band),
+            f"{role.hit_rate:.0%}",
+            f"{role.mean_band_distance:.2f}",
+            str(role.worst_distance),
+            f"{role.mean_score:.1f}" if role.mean_score is not None else "n/a",
+        ]
+        for role in report.by_role
+    ]
+    # A labelled role that scored nothing still gets a row. Leaving it out of the
+    # table is what let a dropped reviewer read as a passing one.
+    rows.extend(
+        [role.value, "0", "0", "no score", "n/a", "n/a", "n/a"]
+        for role in report.unmeasured_roles
+    )
     lines.extend(["", ""])
     lines.extend(
         _table(
@@ -101,22 +142,18 @@ def render_calibration(report: CalibrationReport, min_hit_rate: float) -> list[s
                 "Worst",
                 "Mean score",
             ],
-            [
-                [
-                    role.role.value,
-                    str(role.labelled_scores),
-                    str(role.in_band),
-                    f"{role.hit_rate:.0%}",
-                    f"{role.mean_band_distance:.2f}",
-                    str(role.worst_distance),
-                    f"{role.mean_score:.1f}" if role.mean_score is not None else "n/a",
-                ]
-                for role in report.by_role
-            ],
+            rows,
         )
     )
     lines.append("")
     lines.append(f"Gate: every role must reach {min_hit_rate:.0%}.")
+    if report.unmeasured_roles:
+        named = ", ".join(role.value for role in report.unmeasured_roles)
+        lines.append("")
+        lines.append(
+            f"The dataset labels {named}, and this run scored none of it. A role with "
+            "no answer fails the gate rather than passing it quietly."
+        )
 
     if report.misses:
         shown = report.misses[:MAX_MISS_ROWS]

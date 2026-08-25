@@ -396,7 +396,7 @@ Default threshold: **0.55** (configurable). Ideas scoring below this are dropped
 
 §6.1 to §6.3 treat a reviewer score as a measurement. Two evals check that assumption. Both run from `nexis/evals` (ADR-0018).
 
-**Calibration** asks whether a reviewer agrees with a human. `tests/evals/dataset.jsonl` holds frozen `BusinessIdea` objects. Each carries the score band one or more roles are expected to land in, and the written reasoning behind those bands. A score inside its band is correct, and the error is the distance to the nearest edge, which is zero inside. Each role must reach a minimum share of in-band scores; the default is 70%.
+**Calibration** asks whether a reviewer agrees with a human. `tests/evals/dataset.jsonl` holds frozen `BusinessIdea` objects. Each carries the score band one or more roles are expected to land in, and the written reasoning behind those bands. A score inside its band is correct, and the error is the distance to the nearest edge, which is zero inside. Each role must reach a minimum share of in-band scores; the default is 70%. A labelled role that scored nothing fails the gate as well, because an outage that drops every call from one reviewer must not read as a passing run.
 
 A label is a band and never a single value. A human can say that an obviously commoditised idea must not score 8 for moat, and cannot say whether it is a 2 or a 3. A role carries a band only where the label writer holds a firm opinion, so an unlabelled pair is reviewed but does not gate.
 
@@ -406,7 +406,7 @@ A label is a band and never a single value. A human can say that an obviously co
 
 **An eval never runs Layer 1.** The ideas are frozen, which holds every variable except the reviewer and keeps the search API out of the loop.
 
-**Spending is capped in code.** The collector projects the cost from the price table (§8.3) and refuses to start above a limit passed on the command line. A model with no price stops the projection instead of counting as free. The manifest stores the projected and the measured cost side by side.
+**Spending is capped in code.** The collector projects the cost from the price table (§8.3) and refuses to start above a limit passed on the command line. A model with no price stops the projection instead of counting as free. The manifest stores the projected and the measured cost side by side, and the tokens the run really used, so the assumption behind the projection is corrected from a measurement and not from reading the prompts. A reasoning model bills thinking tokens that never reach the answer, so a projection sized from visible text alone under-protects.
 
 The workflow that runs the evals in CI is manual and never fires on a push or a pull request. The formula in §6.2 needs no LLM, and is frozen separately in a regression test that runs in the ordinary CI job.
 

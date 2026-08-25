@@ -48,15 +48,24 @@ jobs:
       # Runs even when collection broke halfway, because the answers already
       # paid for are on disk and still worth reading. Skipped when the spend
       # guard refused the run, which leaves no directory at all.
+      #
+      # `report` exits non-zero by design when a role misses the gate, and the
+      # step runs under `set -e`. Hold the exit status, publish the summary, and
+      # exit with the held status, so the one run worth reading is not the one
+      # that prints nothing.
       - name: Report
         if: always() && hashFiles('eval-run/manifest.json') != ''
         run: |
+          status=0
           uv run python -m nexis.evals report \
             --run eval-run \
             --dataset tests/evals/dataset.jsonl \
             --min-hit-rate "${{ inputs.min_hit_rate }}" \
-            --out eval-run/report.md
-          cat eval-run/report.md >> "$GITHUB_STEP_SUMMARY"
+            --out eval-run/report.md || status=$?
+          if [ -f eval-run/report.md ]; then
+            cat eval-run/report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
 
       - name: Upload the run
         if: always() && hashFiles('eval-run/**') != ''
